@@ -100,47 +100,69 @@ func (d *Decoder) popParser(level int, tag string, value string, xref string) er
 	return d.parsers[len(d.parsers)-1](level, tag, value, xref)
 }
 
+func (d *Decoder) individual(xref string) *IndividualRecord {
+	if xref == "" {
+		return &IndividualRecord{}
+	}
+
+	ref, found := d.refs[xref].(*IndividualRecord)
+	if !found {
+		rec := &IndividualRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	} else {
+		return ref
+	}
+}
+
+func (d *Decoder) family(xref string) *FamilyRecord {
+	if xref == "" {
+		return &FamilyRecord{}
+	}
+
+	ref, found := d.refs[xref].(*FamilyRecord)
+	if !found {
+		rec := &FamilyRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	} else {
+		return ref
+	}
+}
+
+func (d *Decoder) source(xref string) *SourceRecord {
+	if xref == "" {
+		return &SourceRecord{}
+	}
+
+	ref, found := d.refs[xref].(*SourceRecord)
+	if !found {
+		rec := &SourceRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	} else {
+		return ref
+	}
+}
+
 func makeRootParser(d *Decoder, g *Gedcom) parser {
 	return func(level int, tag string, value string, xref string) error {
 		//println(level, tag, value, xref)
 		if level == 0 {
 			switch tag {
 			case "INDI":
-				var obj *IndividualRecord
-				if xref != "" {
-					ref, ok := d.refs[xref].(*IndividualRecord)
-					if !ok {
-						obj = &IndividualRecord{Xref: stripXref(xref)}
-						d.refs[obj.Xref] = obj
-					} else {
-						obj = ref
-					}
-				}
-
+				obj := d.individual(xref)
 				g.Individual = append(g.Individual, obj)
 				d.pushParser(makeIndividualParser(d, obj, level))
-
 			case "SUBM":
 				g.Submitter = append(g.Submitter, &SubmitterRecord{})
 			case "FAM":
-				var obj *FamilyRecord
-				if xref != "" {
-					ref, ok := d.refs[xref].(*FamilyRecord)
-					if !ok {
-						obj = &FamilyRecord{Xref: stripXref(xref)}
-						d.refs[obj.Xref] = obj
-					} else {
-						obj = ref
-					}
-				}
-
+				obj := d.family(xref)
 				g.Family = append(g.Family, obj)
 				d.pushParser(makeFamilyParser(d, obj, level))
 			case "SOUR":
-				s := &SourceRecord{
-					Xref: stripXref(xref),
-				}
-				g.Source = append(g.Source, s)
+				obj := d.source(xref)
+				g.Source = append(g.Source, obj)
 				//d.pushParser(makeSourceParser(d, s, level))
 			}
 		}
@@ -169,25 +191,12 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 			i.Attribute = append(i.Attribute, e)
 			d.pushParser(makeEventParser(d, e, level))
 		case "FAMC":
-			xref := stripXref(value)
-
-			family, ok := d.refs[xref].(*FamilyRecord)
-			if !ok {
-				family = &FamilyRecord{Xref: xref}
-				d.refs[family.Xref] = family
-			}
-
+			family := d.family(stripXref(value))
 			f := &FamilyLinkRecord{Family: family}
 			i.Parents = append(i.Parents, f)
 			d.pushParser(makeFamilyLinkParser(d, f, level))
 		case "FAMS":
-			xref := stripXref(value)
-			family, ok := d.refs[xref].(*FamilyRecord)
-			if !ok {
-				family = &FamilyRecord{Xref: xref}
-				d.refs[family.Xref] = family
-			}
-
+			family := d.family(stripXref(value))
 			f := &FamilyLinkRecord{Family: family}
 			i.Family = append(i.Family, f)
 			d.pushParser(makeFamilyLinkParser(d, f, level))
@@ -204,9 +213,9 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 		switch tag {
 
 		case "SOUR":
-			s := &SourceRecord{}
-			n.Source = append(n.Source, s)
-			d.pushParser(makeSourceParser(d, s, level))
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			n.Citation = append(n.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			n.Note = append(n.Note, r)
@@ -223,16 +232,36 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
-		case "PAGE":
-			s.Page = value
-		case "QUAY":
-			s.Quay = value
+		case "TITL":
+			s.Title = value
+			d.pushParser(makeTextParser(d, &s.Title, level))
+
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			s.Note = append(s.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		}
+
+		return nil
+	}
+}
+
+func makeCitationParser(d *Decoder, c *CitationRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "PAGE":
+			c.Page = value
+		case "QUAY":
+			c.Quay = value
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			c.Note = append(c.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
 		case "DATA":
-			d.pushParser(makeDataParser(d, &s.Data, level))
+			d.pushParser(makeDataParser(d, &c.Data, level))
 
 		}
 
@@ -251,9 +280,9 @@ func makeNoteParser(d *Decoder, n *NoteRecord, minLevel int) parser {
 		case "CONC":
 			n.Note = n.Note + value
 		case "SOUR":
-			s := &SourceRecord{}
-			n.Source = append(n.Source, s)
-			d.pushParser(makeSourceParser(d, s, level))
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			n.Citation = append(n.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
 		}
 
 		return nil
@@ -310,9 +339,9 @@ func makeEventParser(d *Decoder, e *EventRecord, minLevel int) parser {
 			e.Address.Full = value
 			d.pushParser(makeAddressParser(d, &e.Address, level))
 		case "SOUR":
-			s := &SourceRecord{}
-			e.Source = append(e.Source, s)
-			d.pushParser(makeSourceParser(d, s, level))
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			e.Citation = append(e.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			e.Note = append(e.Note, r)
@@ -331,9 +360,9 @@ func makePlaceParser(d *Decoder, p *PlaceRecord, minLevel int) parser {
 		switch tag {
 
 		case "SOUR":
-			s := &SourceRecord{}
-			p.Source = append(p.Source, s)
-			d.pushParser(makeSourceParser(d, s, level))
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			p.Citation = append(p.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			p.Note = append(p.Note, r)
@@ -370,30 +399,11 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 		}
 		switch tag {
 		case "HUSB":
-			xref = stripXref(value)
-			i, ok := d.refs[xref].(*IndividualRecord)
-			if !ok {
-				i = &IndividualRecord{Xref: xref}
-				d.refs[i.Xref] = i
-			}
-			f.Husband = i
+			f.Husband = d.individual(stripXref(value))
 		case "WIFE":
-			xref = stripXref(value)
-			i, ok := d.refs[xref].(*IndividualRecord)
-			if !ok {
-				i = &IndividualRecord{Xref: xref}
-				d.refs[i.Xref] = i
-			}
-			f.Wife = i
+			f.Wife = d.individual(stripXref(value))
 		case "CHIL":
-			xref = stripXref(value)
-			i, ok := d.refs[xref].(*IndividualRecord)
-			if !ok {
-				i = &IndividualRecord{Xref: stripXref(xref)}
-				d.refs[i.Xref] = i
-			}
-			f.Child = append(f.Child, i)
-
+			f.Child = append(f.Child, d.individual(stripXref(value)))
 		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN":
 			e := &EventRecord{Tag: tag, Value: value}
 			f.Event = append(f.Event, e)

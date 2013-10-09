@@ -17,6 +17,18 @@ type Gedcom struct {
 }
 
 type Header struct {
+	SourceSystem SystemRecord
+}
+
+type SystemRecord struct {
+	Id              string
+	Version         string
+	ProductName     string
+	BusinessName    string
+	Address         AddressRecord
+	SourceName      string
+	SourceDate      string
+	SourceCopyright string
 }
 
 type SubmissionRecord struct {
@@ -52,20 +64,27 @@ type RepositoryRecord struct {
 
 type SourceRecord struct {
 	Xref  string
-	Page  string
-	Data  DataRecord
-	Quay  string
+	Title string
 	Media []*MediaRecord
 	Note  []*NoteRecord
+}
+
+type CitationRecord struct {
+	Source *SourceRecord
+	Page   string
+	Data   DataRecord
+	Quay   string
+	Media  []*MediaRecord
+	Note   []*NoteRecord
 }
 
 type SubmitterRecord struct {
 }
 
 type NameRecord struct {
-	Name   string
-	Source []*SourceRecord
-	Note   []*NoteRecord
+	Name     string
+	Citation []*CitationRecord
+	Note     []*NoteRecord
 }
 
 type DataRecord struct {
@@ -74,29 +93,29 @@ type DataRecord struct {
 }
 
 type EventRecord struct {
-	Tag     string
-	Value   string
-	Type    string
-	Date    string
-	Place   PlaceRecord
-	Address AddressRecord
-	Age     string
-	Agency  string
-	Cause   string
-	Source  []*SourceRecord
-	Media   []*MediaRecord
-	Note    []*NoteRecord
+	Tag      string
+	Value    string
+	Type     string
+	Date     string
+	Place    PlaceRecord
+	Address  AddressRecord
+	Age      string
+	Agency   string
+	Cause    string
+	Citation []*CitationRecord
+	Media    []*MediaRecord
+	Note     []*NoteRecord
 }
 
 type NoteRecord struct {
-	Note   string
-	Source []*SourceRecord
+	Note     string
+	Citation []*CitationRecord
 }
 
 type PlaceRecord struct {
-	Name   string
-	Source []*SourceRecord
-	Note   []*NoteRecord
+	Name     string
+	Citation []*CitationRecord
+	Note     []*NoteRecord
 }
 
 type FamilyLinkRecord struct {
