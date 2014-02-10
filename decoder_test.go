@@ -88,7 +88,7 @@ func TestIndividual(t *testing.T) {
 
 	i1 := g.Individual[0]
 
-	if i1.Xref != "@PERSON1@" {
+	if i1.Xref != "PERSON1" {
 		t.Errorf(`Individual 0 xref was "%s", expected @PERSON1@`, i1.Xref)
 	}
 
@@ -104,6 +104,11 @@ func TestIndividual(t *testing.T) {
 		Name: "given name /surname/jr.",
 		Citation: []*CitationRecord{
 			&CitationRecord{
+				Source: &SourceRecord{
+					Xref:  "SOURCE1",
+					Title: "",
+				},
+
 				Page: "42",
 				Quay: "0",
 				Data: DataRecord{
@@ -141,6 +146,10 @@ func TestIndividual(t *testing.T) {
 		},
 		Citation: []*CitationRecord{
 			&CitationRecord{
+				Source: &SourceRecord{
+					Xref:  "SOURCE1",
+					Title: "",
+				},
 				Page: "42",
 				Quay: "2",
 				Data: DataRecord{
@@ -179,6 +188,10 @@ func TestIndividual(t *testing.T) {
 		},
 		Citation: []*CitationRecord{
 			&CitationRecord{
+				Source: &SourceRecord{
+					Xref:  "SOURCE1",
+					Title: "",
+				},
 				Page: "42",
 				Quay: "3",
 				Data: DataRecord{
@@ -207,43 +220,6 @@ func TestIndividual(t *testing.T) {
 
 	if len(i1.Parents) != 2 {
 		t.Fatalf(`Individual 0 had %d parent families, expected 2`, len(i1.Parents))
-	}
-
-	parents := &FamilyRecord{
-		Xref: "@PARENTS@",
-		Husband: &IndividualRecord{
-			Xref: "@PERSON5@",
-			Name: []*NameRecord{
-				&NameRecord{
-					Name: "/Father/",
-				},
-			},
-			Sex: "M",
-			Family: []*FamilyLinkRecord{
-				&FamilyLinkRecord{},
-			},
-		},
-	}
-
-	par1 := &FamilyLinkRecord{
-		Family: parents,
-
-		Type: "birth",
-		Note: []*NoteRecord{
-			&NoteRecord{
-				Note: "Note about the link to parents\nNote continued here. The word TEST should not be broken!",
-			},
-			&NoteRecord{
-				Note: "Another note about the link to parents\nNote continued here. The word TEST should not be broken!",
-			},
-		},
-	}
-
-	parents.Husband.Family[0] = &FamilyLinkRecord{Family: parents}
-	parents.Child = []*IndividualRecord{i1}
-
-	if !reflect.DeepEqual(i1.Parents[0], par1) {
-		t.Errorf("Individual 0 parent 0 was: %s\nExpected: %s", spew.Sdump(i1.Parents[0]), spew.Sdump(par1))
 	}
 
 }
