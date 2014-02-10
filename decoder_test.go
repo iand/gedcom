@@ -102,8 +102,8 @@ func TestIndividual(t *testing.T) {
 
 	name1 := &NameRecord{
 		Name: "given name /surname/jr.",
-		Source: []*SourceRecord{
-			&SourceRecord{
+		Citation: []*CitationRecord{
+			&CitationRecord{
 				Page: "42",
 				Quay: "0",
 				Data: DataRecord{
@@ -139,8 +139,8 @@ func TestIndividual(t *testing.T) {
 		Place: PlaceRecord{
 			Name: "The place",
 		},
-		Source: []*SourceRecord{
-			&SourceRecord{
+		Citation: []*CitationRecord{
+			&CitationRecord{
 				Page: "42",
 				Quay: "2",
 				Data: DataRecord{
@@ -177,8 +177,8 @@ func TestIndividual(t *testing.T) {
 		Place: PlaceRecord{
 			Name: "The place",
 		},
-		Source: []*SourceRecord{
-			&SourceRecord{
+		Citation: []*CitationRecord{
+			&CitationRecord{
 				Page: "42",
 				Quay: "3",
 				Data: DataRecord{
