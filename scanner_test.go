@@ -25,7 +25,7 @@ var examples = []example{
 	{[]byte("1 SEX F\r"), 1, `SEX`, `F`, ""},
 	{[]byte("1 SEX F \r"), 1, `SEX`, `F `, ""},
 	{[]byte("0 HEAD\r"), 0, `HEAD`, ``, ""},
-	{[]byte("0 @OTHER@ SUBM\n"), 0, `SUBM`, ``, "@OTHER@"},
+	{[]byte("0 @OTHER@ SUBM\n"), 0, `SUBM`, ``, "OTHER"},
 }
 
 func TestNextTagFound(t *testing.T) {
