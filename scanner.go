@@ -2,6 +2,7 @@
 This is free and unencumbered software released into the public domain. For more
 information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 */
+
 package gedcom
 
 import (
@@ -158,9 +159,6 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				continue
 			}
 
-			if s.parseState == stateEnd {
-				break
-			}
 		}
 	}
 

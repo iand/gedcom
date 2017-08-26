@@ -2,6 +2,7 @@
 This is free and unencumbered software released into the public domain. For more
 information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 */
+
 package gedcom
 
 import (
@@ -103,7 +104,7 @@ func TestIndividual(t *testing.T) {
 	name1 := &NameRecord{
 		Name: "given name /surname/jr.",
 		Citation: []*CitationRecord{
-			&CitationRecord{
+			{
 				Source: &SourceRecord{
 					Xref:  "SOURCE1",
 					Title: "",
@@ -118,14 +119,14 @@ func TestIndividual(t *testing.T) {
 					},
 				},
 				Note: []*NoteRecord{
-					&NoteRecord{
+					{
 						Note: "A note\nNote continued here. The word TEST should not be broken!",
 					},
 				},
 			},
 		},
 		Note: []*NoteRecord{
-			&NoteRecord{
+			{
 				Note: "Personal Name note\nNote continued here. The word TEST should not be broken!",
 			},
 		},
@@ -145,7 +146,7 @@ func TestIndividual(t *testing.T) {
 			Name: "The place",
 		},
 		Citation: []*CitationRecord{
-			&CitationRecord{
+			{
 				Source: &SourceRecord{
 					Xref:  "SOURCE1",
 					Title: "",
@@ -159,14 +160,14 @@ func TestIndividual(t *testing.T) {
 					},
 				},
 				Note: []*NoteRecord{
-					&NoteRecord{
+					{
 						Note: "A note\nNote continued here. The word TEST should not be broken!",
 					},
 				},
 			},
 		},
 		Note: []*NoteRecord{
-			&NoteRecord{
+			{
 				Note: "BIRTH event note (the event of entering into life)\nNote continued here. The word TEST should not be broken!",
 			},
 		},
@@ -187,7 +188,7 @@ func TestIndividual(t *testing.T) {
 			Name: "The place",
 		},
 		Citation: []*CitationRecord{
-			&CitationRecord{
+			{
 				Source: &SourceRecord{
 					Xref:  "SOURCE1",
 					Title: "",
@@ -201,14 +202,14 @@ func TestIndividual(t *testing.T) {
 					},
 				},
 				Note: []*NoteRecord{
-					&NoteRecord{
+					{
 						Note: "A note\nNote continued here. The word TEST should not be broken!",
 					},
 				},
 			},
 		},
 		Note: []*NoteRecord{
-			&NoteRecord{
+			{
 				Note: "CASTE event note (the name of an individual's rank or status in society, based   on racial or religious differences, or differences in wealth, inherited   rank, profession, occupation, etc)\nNote continued here. The word TEST should not be broken!",
 			},
 		},

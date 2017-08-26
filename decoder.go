@@ -2,6 +2,8 @@
 This is free and unencumbered software released into the public domain. For more
 information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 */
+
+// Package gedcom provides a functions to parse GEDCOM files.
 package gedcom
 
 import (
@@ -16,7 +18,7 @@ type Decoder struct {
 	refs    map[string]interface{}
 }
 
-// NewDecoder returns a new decoder that reads from r.
+// NewDecoder returns a new decoder that reads r.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r}
 }
@@ -73,7 +75,7 @@ func (d *Decoder) scan(g *Gedcom) {
 		rest := copy(buf, buf[pos:])
 
 		// top up buffer
-		num, err := d.r.Read(buf[rest:len(buf)])
+		num, err := d.r.Read(buf[rest:])
 		if err != nil {
 			break
 		}
@@ -110,9 +112,9 @@ func (d *Decoder) individual(xref string) *IndividualRecord {
 		rec := &IndividualRecord{Xref: xref}
 		d.refs[rec.Xref] = rec
 		return rec
-	} else {
-		return ref
 	}
+	return ref
+
 }
 
 func (d *Decoder) family(xref string) *FamilyRecord {
@@ -125,9 +127,8 @@ func (d *Decoder) family(xref string) *FamilyRecord {
 		rec := &FamilyRecord{Xref: xref}
 		d.refs[rec.Xref] = rec
 		return rec
-	} else {
-		return ref
 	}
+	return ref
 }
 
 func (d *Decoder) source(xref string) *SourceRecord {
@@ -140,9 +141,8 @@ func (d *Decoder) source(xref string) *SourceRecord {
 		rec := &SourceRecord{Xref: xref}
 		d.refs[rec.Xref] = rec
 		return rec
-	} else {
-		return ref
 	}
+	return ref
 }
 
 func makeRootParser(d *Decoder, g *Gedcom) parser {
