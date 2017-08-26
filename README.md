@@ -2,6 +2,8 @@
 
 Go package to parse GEDCOM files.
 
+[![Build Status](https://travis-ci.org/iand/gedcom.svg?branch=master)](https://travis-ci.org/iand/gedcom)
+
 ## Usage
 
 The package provides a Decoder with a single Decode method that returns a Gedcom struct. Use the NewDecoder method to create a new decoder.
