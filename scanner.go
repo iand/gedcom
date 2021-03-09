@@ -55,7 +55,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				continue
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Found non-whitespace %q (%#[1]x) before level at offset %d", c, i)
+				err = fmt.Errorf("found non-whitespace %q (%#[1]x) before level at offset %d", c, i)
 				return
 			}
 		case stateLevel:
@@ -72,7 +72,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				s.parseState = stateSeekTagOrXref
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Level contained non-numerics")
+				err = fmt.Errorf("level contained non-numerics")
 				return
 			}
 
@@ -85,7 +85,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				continue
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Tag \"%s\" contained non-alphanumeric", string(data[s.tokenStart:i]))
+				err = fmt.Errorf("tag %q contained non-alphanumeric", string(data[s.tokenStart:i]))
 				return
 			}
 		case stateSeekTagOrXref:
@@ -100,7 +100,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				continue
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Xref \"%s\" contained non-alphanumeric", string(data[s.tokenStart:i]))
+				err = fmt.Errorf("xref %q contained non-alphanumeric", string(data[s.tokenStart:i]))
 				return
 			}
 
@@ -118,7 +118,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				s.parseState = stateSeekValue
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Tag contained non-alphanumeric")
+				err = fmt.Errorf("tag contained non-alphanumeric")
 				return
 			}
 
@@ -131,7 +131,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				s.parseState = stateSeekTag
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Xref contained non-alphanumeric")
+				err = fmt.Errorf("xref contained non-alphanumeric")
 				return
 			}
 		case stateSeekValue:
