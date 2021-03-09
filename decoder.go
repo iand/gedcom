@@ -14,14 +14,27 @@ import (
 
 // A Decoder reads and decodes GEDCOM objects from an input stream.
 type Decoder struct {
-	r       io.Reader
-	parsers []parser
-	refs    map[string]interface{}
+	r          io.Reader
+	parsers    []parser
+	refs       map[string]interface{}
+	bufferSize int
 }
 
 // NewDecoder returns a new decoder that reads r.
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r}
+	return &Decoder{
+		r:          r,
+		bufferSize: 512,
+	}
+}
+
+// SetBufferSize sets the size of the buffer used to hold data while decoding. Larger values will reduce the number
+// of reads needed but will increase memory used. The default value is 512 bytes.
+func (d *Decoder) SetBufferSize(n int) {
+	if n < 1 {
+		panic("buffer size must be greater than zero")
+	}
+	d.bufferSize = n
 }
 
 // Decode reads the next GEDCOM-encoded value from its
@@ -47,7 +60,7 @@ func (d *Decoder) Decode() (*Gedcom, error) {
 
 func (d *Decoder) scan(g *Gedcom) error {
 	s := &scanner{}
-	buf := make([]byte, 512)
+	buf := make([]byte, d.bufferSize)
 
 	n, err := d.r.Read(buf)
 	if err != nil {
