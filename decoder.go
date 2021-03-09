@@ -164,7 +164,6 @@ func (d *Decoder) source(xref string) *SourceRecord {
 
 func makeRootParser(d *Decoder, g *Gedcom) parser {
 	return func(level int, tag string, value string, xref string) error {
-		// println(level, tag, value, xref)
 		if level == 0 {
 			switch tag {
 			case "INDI":
@@ -172,6 +171,7 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				g.Individual = append(g.Individual, obj)
 				d.pushParser(makeIndividualParser(d, obj, level))
 			case "SUBM":
+				// TODO: parse submitters
 				g.Submitter = append(g.Submitter, &SubmitterRecord{})
 			case "FAM":
 				obj := d.family(xref)
@@ -180,7 +180,7 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 			case "SOUR":
 				obj := d.source(xref)
 				g.Source = append(g.Source, obj)
-				// d.pushParser(makeSourceParser(d, s, level))
+				d.pushParser(makeSourceParser(d, obj, level))
 			}
 		}
 		return nil

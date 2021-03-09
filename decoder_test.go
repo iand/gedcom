@@ -8,10 +8,9 @@ package gedcom
 import (
 	"bytes"
 	"io/ioutil"
-	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-cmp/cmp"
 )
 
 var data []byte
@@ -63,21 +62,6 @@ func TestStructuresAreInitialized(t *testing.T) {
 func TestIndividual(t *testing.T) {
 	d := NewDecoder(bytes.NewReader(data))
 
-	// ex1 := &IndividualRecord {
-	// 	Xref: "@PERSON1@",
-	// 	Sex: "M",
-	// 	Name: []*NameRecord{
-	// 		&NameRecord{
-	// 			Name: "given name /surname/jr.",
-	// 			Note: "Personal Name note\nNote continued here. The word TEST should not be broken!",
-	// 			},
-	// 		&NameRecord{
-	// 			Name: "another name /surname/",
-	// 			Note: "Personal Name note\nNote continued here. The word TEST should not be broken!",
-	// 			},
-	// 	}
-	// }
-
 	g, err := d.Decode()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -101,13 +85,25 @@ func TestIndividual(t *testing.T) {
 		t.Fatalf(`Individual 0 had %d names, expected 2`, len(i1.Name))
 	}
 
+	// Create a comparison option that compares sources by xref only
+	sourceOpt := cmp.Comparer(func(a, b *SourceRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		return a.Xref == b.Xref
+	})
+
 	name1 := &NameRecord{
 		Name: "given name /surname/jr.",
 		Citation: []*CitationRecord{
 			{
 				Source: &SourceRecord{
-					Xref:  "SOURCE1",
-					Title: "",
+					Xref: "SOURCE1",
 				},
 
 				Page: "42",
@@ -132,8 +128,8 @@ func TestIndividual(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(i1.Name[0], name1) {
-		t.Errorf("Individual 0 name 0 was: %s", spew.Sdump(i1.Name[0]))
+	if diff := cmp.Diff(i1.Name[0], name1, sourceOpt); diff != "" {
+		t.Errorf("Individual 0, name 0 mismatch (-want +got):\n%s", diff)
 	}
 
 	if len(i1.Event) != 24 {
@@ -148,8 +144,7 @@ func TestIndividual(t *testing.T) {
 		Citation: []*CitationRecord{
 			{
 				Source: &SourceRecord{
-					Xref:  "SOURCE1",
-					Title: "",
+					Xref: "SOURCE1",
 				},
 				Page: "42",
 				Quay: "2",
@@ -173,8 +168,8 @@ func TestIndividual(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(i1.Event[0], event1) {
-		t.Errorf("Individual 0 event 0 was: %s", spew.Sdump(i1.Event[0]))
+	if diff := cmp.Diff(i1.Event[0], event1, sourceOpt); diff != "" {
+		t.Errorf("Individual 0, event 0 mismatch (-want +got):\n%s", diff)
 	}
 
 	if len(i1.Attribute) != 15 {
@@ -190,8 +185,7 @@ func TestIndividual(t *testing.T) {
 		Citation: []*CitationRecord{
 			{
 				Source: &SourceRecord{
-					Xref:  "SOURCE1",
-					Title: "",
+					Xref: "SOURCE1",
 				},
 				Page: "42",
 				Quay: "3",
@@ -215,8 +209,8 @@ func TestIndividual(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(i1.Attribute[0], att1) {
-		t.Errorf("Individual 0 attribute 0 was: %s\nExpected: %s", spew.Sdump(i1.Attribute[0]), spew.Sdump(att1))
+	if diff := cmp.Diff(i1.Attribute[0], att1, sourceOpt); diff != "" {
+		t.Errorf("Individual 0, attribute 0 mismatch (-want +got):\n%s", diff)
 	}
 
 	if len(i1.Parents) != 2 {
@@ -232,8 +226,10 @@ func TestSubmitter(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(g.Submitter) != 1 {
-		t.Fatalf("Submitter list length was %d, expected 1", len(g.Submitter))
+	submitters := []*SubmitterRecord{{}}
+
+	if diff := cmp.Diff(g.Submitter, submitters); diff != "" {
+		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -245,8 +241,81 @@ func TestFamily(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(g.Family) != 4 {
-		t.Fatalf("Family list length was %d, expected 4", len(g.Family))
+	// Create a comparison option that compares individuals by xref only
+	indOpt := cmp.Comparer(func(a, b *IndividualRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		return a.Xref == b.Xref
+	})
+
+	// Create a comparison option that compares events by tag and date
+	eventOpt := cmp.Comparer(func(a, b *EventRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		return a.Tag == b.Tag && a.Date == b.Date
+	})
+
+	families := []*FamilyRecord{
+		{
+			Xref:    "FAMILY1",
+			Husband: &IndividualRecord{Xref: "PERSON1"},
+			Wife:    &IndividualRecord{Xref: "PERSON2"},
+			Child: []*IndividualRecord{
+				{Xref: "PERSON3"},
+				{Xref: "PERSON4"},
+			},
+			Event: []*EventRecord{
+				{Tag: "ANUL", Date: "31 DEC 1997"},
+				{Tag: "CENS", Date: "31 DEC 1997"},
+				{Tag: "DIV", Date: "31 DEC 1997"},
+				{Tag: "DIVF", Date: "31 DEC 1997"},
+				{Tag: "ENGA", Date: "31 DEC 1997"},
+				{Tag: "MARR", Date: "31 DEC 1997"},
+				{Tag: "MARB", Date: "31 DEC 1997"},
+				{Tag: "MARC", Date: "31 DEC 1997"},
+				{Tag: "MARL", Date: "31 DEC 1997"},
+				{Tag: "MARS", Date: "31 DEC 1997"},
+				{Tag: "EVEN", Date: "31 DEC 1997"},
+			},
+		},
+		{
+			Xref:    "PARENTS",
+			Husband: &IndividualRecord{Xref: "PERSON5"},
+			Child: []*IndividualRecord{
+				{Xref: "PERSON1"},
+			},
+		},
+		{
+			Xref: "ADOPTIVE_PARENTS",
+			Wife: &IndividualRecord{Xref: "PERSON6"},
+			Child: []*IndividualRecord{
+				{Xref: "PERSON1"},
+			},
+		},
+		{
+			Xref:    "FAMILY2",
+			Husband: &IndividualRecord{Xref: "PERSON1"},
+			Wife:    &IndividualRecord{Xref: "PERSON8"},
+			Child: []*IndividualRecord{
+				{Xref: "PERSON7"},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(g.Family, families, indOpt, eventOpt); diff != "" {
+		t.Errorf("family mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -258,7 +327,28 @@ func TestSource(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(g.Source) != 1 {
-		t.Fatalf("Source list length was %d, expected 1", len(g.Source))
+	sources := []*SourceRecord{
+		{
+			Xref:  "SOURCE1",
+			Title: "A bmp picture",
+			Note: []*NoteRecord{
+				{
+					Note: "A note about whatever\nNote continued here. The word TEST should not be broken!",
+				},
+				{
+					Note: "A note\nNote continued here. The word TEST should not be broken!",
+				},
+				{
+					Note: "A note about the family\nNote continued here. The word TEST should not be broken!",
+				},
+				{
+					Note: "A note\nNote continued here. The word TEST should not be broken!",
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(g.Source, sources); diff != "" {
+		t.Errorf("source mismatch (-want +got):\n%s", diff)
 	}
 }
