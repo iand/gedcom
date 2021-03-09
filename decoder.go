@@ -7,6 +7,7 @@ information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 package gedcom
 
 import (
+	"fmt"
 	"io"
 	"strings"
 )
@@ -26,7 +27,6 @@ func NewDecoder(r io.Reader) *Decoder {
 // Decode reads the next GEDCOM-encoded value from its
 // input and stores it in the value pointed to by v.
 func (d *Decoder) Decode() (*Gedcom, error) {
-
 	g := &Gedcom{
 		Family:     make([]*FamilyRecord, 0),
 		Individual: make([]*IndividualRecord, 0),
@@ -38,18 +38,20 @@ func (d *Decoder) Decode() (*Gedcom, error) {
 
 	d.refs = make(map[string]interface{})
 	d.parsers = []parser{makeRootParser(d, g)}
-	d.scan(g)
+	if err := d.scan(g); err != nil {
+		return nil, err
+	}
 
 	return g, nil
 }
 
-func (d *Decoder) scan(g *Gedcom) {
+func (d *Decoder) scan(g *Gedcom) error {
 	s := &scanner{}
 	buf := make([]byte, 512)
 
 	n, err := d.r.Read(buf)
 	if err != nil {
-		// TODO
+		return fmt.Errorf("read input: %w", err)
 	}
 
 	for n > 0 {
@@ -61,8 +63,7 @@ func (d *Decoder) scan(g *Gedcom) {
 			pos += offset
 			if err != nil {
 				if err != io.EOF {
-					println(err.Error())
-					return
+					return fmt.Errorf("read next tag: %w", err)
 				}
 				break
 			}
@@ -77,6 +78,9 @@ func (d *Decoder) scan(g *Gedcom) {
 		// top up buffer
 		num, err := d.r.Read(buf[rest:])
 		if err != nil {
+			if err != io.EOF {
+				return fmt.Errorf("read remaining data: %w", err)
+			}
 			break
 		}
 
@@ -84,6 +88,7 @@ func (d *Decoder) scan(g *Gedcom) {
 
 	}
 
+	return nil
 }
 
 type parser func(level int, tag string, value string, xref string) error
@@ -114,7 +119,6 @@ func (d *Decoder) individual(xref string) *IndividualRecord {
 		return rec
 	}
 	return ref
-
 }
 
 func (d *Decoder) family(xref string) *FamilyRecord {
@@ -147,7 +151,7 @@ func (d *Decoder) source(xref string) *SourceRecord {
 
 func makeRootParser(d *Decoder, g *Gedcom) parser {
 	return func(level int, tag string, value string, xref string) error {
-		//println(level, tag, value, xref)
+		// println(level, tag, value, xref)
 		if level == 0 {
 			switch tag {
 			case "INDI":
@@ -163,7 +167,7 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 			case "SOUR":
 				obj := d.source(xref)
 				g.Source = append(g.Source, obj)
-				//d.pushParser(makeSourceParser(d, s, level))
+				// d.pushParser(makeSourceParser(d, s, level))
 			}
 		}
 		return nil

@@ -44,7 +44,6 @@ func (s *scanner) reset() {
 }
 
 func (s *scanner) nextTag(data []byte) (offset int, err error) {
-
 	for i, c := range data {
 		switch s.parseState {
 		case stateBegin:
@@ -56,7 +55,7 @@ func (s *scanner) nextTag(data []byte) (offset int, err error) {
 				continue
 			default:
 				s.parseState = stateError
-				err = fmt.Errorf("Found non-whitespace before level")
+				err = fmt.Errorf("Found non-whitespace %q (%#[1]x) before level at offset %d", c, i)
 				return
 			}
 		case stateLevel:

@@ -7,15 +7,14 @@ package gedcom
 
 import (
 	"bytes"
-	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"reflect"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
-var (
-	data []byte
-)
+var data []byte
 
 func init() {
 	var err error
@@ -29,9 +28,8 @@ func TestStructuresAreInitialized(t *testing.T) {
 	d := NewDecoder(bytes.NewReader(data))
 
 	g, err := d.Decode()
-
 	if err != nil {
-		t.Fatalf("Result of decoding gedcom gave error, expected no error")
+		t.Fatalf("Result of decoding gedcom gave error %v, expected no error", err)
 	}
 
 	if g == nil {
@@ -60,7 +58,6 @@ func TestStructuresAreInitialized(t *testing.T) {
 	if g.Submitter == nil {
 		t.Fatalf("Submitter list was nil, expected valid slice")
 	}
-
 }
 
 func TestIndividual(t *testing.T) {
@@ -81,7 +78,10 @@ func TestIndividual(t *testing.T) {
 	// 	}
 	// }
 
-	g, _ := d.Decode()
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if len(g.Individual) != 8 {
 		t.Fatalf("Individual list length was %d, expected 8", len(g.Individual))
@@ -222,38 +222,43 @@ func TestIndividual(t *testing.T) {
 	if len(i1.Parents) != 2 {
 		t.Fatalf(`Individual 0 had %d parent families, expected 2`, len(i1.Parents))
 	}
-
 }
 
 func TestSubmitter(t *testing.T) {
 	d := NewDecoder(bytes.NewReader(data))
 
-	g, _ := d.Decode()
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if len(g.Submitter) != 1 {
 		t.Fatalf("Submitter list length was %d, expected 1", len(g.Submitter))
 	}
-
 }
 
 func TestFamily(t *testing.T) {
 	d := NewDecoder(bytes.NewReader(data))
 
-	g, _ := d.Decode()
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if len(g.Family) != 4 {
 		t.Fatalf("Family list length was %d, expected 4", len(g.Family))
 	}
-
 }
 
 func TestSource(t *testing.T) {
 	d := NewDecoder(bytes.NewReader(data))
 
-	g, _ := d.Decode()
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if len(g.Source) != 1 {
 		t.Fatalf("Source list length was %d, expected 1", len(g.Source))
 	}
-
 }
