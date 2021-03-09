@@ -113,7 +113,7 @@ func (d *Decoder) pushParser(p parser) {
 func (d *Decoder) popParser(level int, tag string, value string, xref string) error {
 	n := len(d.parsers) - 1
 	if n < 1 {
-		panic("MASSIVE ERROR") // TODO
+		panic("unexpected condition: no parser in stack")
 	}
 	d.parsers = d.parsers[0:n]
 
