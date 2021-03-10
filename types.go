@@ -119,7 +119,13 @@ type ChangeRecord struct {
 }
 
 type RepositoryRecord struct {
-	Xref string
+	Xref              string
+	Name              string
+	Address           AddressRecord
+	Note              []*NoteRecord
+	UserReference     []*UserReferenceRecord
+	AutomatedRecordId string
+	Change            ChangeRecord
 }
 
 type SourceRecord struct {

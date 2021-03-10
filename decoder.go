@@ -226,6 +226,10 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				obj := d.source(xref)
 				g.Source = append(g.Source, obj)
 				d.pushParser(makeSourceParser(d, obj, level))
+			case "REPO":
+				obj := d.repository(xref)
+				g.Repository = append(g.Repository, obj)
+				d.pushParser(makeRepositoryParser(d, obj, level))
 			default:
 				g.UserDefined = append(g.UserDefined, UserDefinedTag{
 					Tag:   tag,
@@ -1009,6 +1013,34 @@ func makeChangeTimeParser(d *Decoder, c *ChangeRecord, minLevel int) parser {
 		switch tag {
 		case "Time":
 			c.Time = value
+		}
+		return nil
+	}
+}
+
+func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "Name":
+			r.Name = value
+		case "ADDR":
+			r.Address.Full = value
+			d.pushParser(makeAddressParser(d, &r.Address, level))
+		case "NOTE":
+			n := &NoteRecord{Note: value}
+			r.Note = append(r.Note, n)
+			d.pushParser(makeNoteParser(d, n, level))
+		case "RIN":
+			r.AutomatedRecordId = value
+		case "REFN":
+			u := &UserReferenceRecord{Number: value}
+			r.UserReference = append(r.UserReference, u)
+			d.pushParser(makeUserReferenceParser(d, u, level))
+		case "CHAN":
+			d.pushParser(makeChangeParser(d, &r.Change, level))
 		}
 		return nil
 	}
