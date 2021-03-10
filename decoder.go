@@ -268,6 +268,24 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 			f := &FamilyLinkRecord{Family: family}
 			i.Parents = append(i.Parents, f)
 			d.pushParser(makeFamilyLinkParser(d, f, level))
+		case "SUBM":
+			submitter := d.submitter(stripXref(value))
+			i.Submitter = append(i.Submitter, submitter)
+		case "ASSO":
+			a := &AssociationRecord{Xref: stripXref(value)}
+			i.Association = append(i.Association, a)
+			d.pushParser(makeAssociationParser(d, a, level))
+		case "ALIA":
+			// ALIA support is broken in the wild and should be deprecated as per https://www.tamurajones.net/GEDCOMALIA.xhtml
+			// Use ALIA as an alternate name
+			if xref == "" && value != "" {
+				n := &NameRecord{Name: value}
+				i.Name = append(i.Name, n)
+			}
+		case "RFN":
+			i.PermanentRecordFileNumber = value
+		case "AFN":
+			i.AncestralFileNumber = value
 		case "FAMS":
 			family := d.family(stripXref(value))
 			f := &FamilyLinkRecord{Family: family}
@@ -1042,6 +1060,28 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &r.Change, level))
 		}
+		return nil
+	}
+}
+
+func makeAssociationParser(d *Decoder, a *AssociationRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "RELA":
+			a.Relation = value
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			a.Citation = append(a.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			a.Note = append(a.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		}
+
 		return nil
 	}
 }

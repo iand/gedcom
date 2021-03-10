@@ -73,20 +73,24 @@ type FamilyRecord struct {
 }
 
 type IndividualRecord struct {
-	Xref              string
-	Name              []*NameRecord
-	Sex               string
-	Event             []*EventRecord
-	Attribute         []*EventRecord
-	Parents           []*FamilyLinkRecord
-	Family            []*FamilyLinkRecord
-	UserReference     []*UserReferenceRecord
-	AutomatedRecordId string
-	Change            ChangeRecord
-	Note              []*NoteRecord
-	Citation          []*CitationRecord
-	Media             []*MediaRecord
-	UserDefined       []UserDefinedTag
+	Xref                      string
+	Name                      []*NameRecord
+	Sex                       string
+	Event                     []*EventRecord
+	Attribute                 []*EventRecord
+	Parents                   []*FamilyLinkRecord
+	Family                    []*FamilyLinkRecord
+	Submitter                 []*SubmitterRecord
+	Association               []*AssociationRecord
+	PermanentRecordFileNumber string
+	AncestralFileNumber       string
+	UserReference             []*UserReferenceRecord
+	AutomatedRecordId         string
+	Change                    ChangeRecord
+	Note                      []*NoteRecord
+	Citation                  []*CitationRecord
+	Media                     []*MediaRecord
+	UserDefined               []UserDefinedTag
 }
 
 type MediaRecord struct {
@@ -249,4 +253,11 @@ type UserDefinedTag struct {
 	Value string
 	Xref  string
 	Level int
+}
+
+type AssociationRecord struct {
+	Xref     string
+	Relation string
+	Citation []*CitationRecord
+	Note     []*NoteRecord
 }

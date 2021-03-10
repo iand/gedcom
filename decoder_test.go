@@ -789,3 +789,36 @@ func TestHeader(t *testing.T) {
 		t.Errorf("header mismatch (-want +got):\n%s", diff)
 	}
 }
+
+func TestIndividualAlia(t *testing.T) {
+	aliaData := []byte(`
+0 @PERSON1@ INDI
+1 SEX F
+1 NAME Margaret /Smith/
+1 ALIA Peggy
+`)
+
+	d := NewDecoder(bytes.NewReader(aliaData))
+
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(g.Individual) == 0 {
+		t.Fatalf("no individual was decoded")
+	}
+
+	individual := &IndividualRecord{
+		Xref: "PERSON1",
+		Name: []*NameRecord{
+			{Name: "Margaret /Smith/"},
+			{Name: "Peggy"}, // alias becomes alternate name
+		},
+		Sex: "F",
+	}
+
+	if diff := cmp.Diff(individual, g.Individual[0]); diff != "" {
+		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
+	}
+}
