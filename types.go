@@ -56,24 +56,64 @@ type Trailer struct {
 }
 
 type FamilyRecord struct {
-	Xref    string
-	Husband *IndividualRecord
-	Wife    *IndividualRecord
-	Child   []*IndividualRecord
-	Event   []*EventRecord
+	Xref              string
+	Husband           *IndividualRecord
+	Wife              *IndividualRecord
+	Child             []*IndividualRecord
+	Event             []*EventRecord
+	NumberOfChildren  string
+	UserReference     []*UserReferenceRecord
+	AutomatedRecordId string
+	Change            ChangeRecord
+	Note              []*NoteRecord
+	Citation          []*CitationRecord
+	Media             []*MediaRecord
+	UserDefined       []UserDefinedTag
 }
 
 type IndividualRecord struct {
-	Xref      string
-	Name      []*NameRecord
-	Sex       string
-	Event     []*EventRecord
-	Attribute []*EventRecord
-	Parents   []*FamilyLinkRecord
-	Family    []*FamilyLinkRecord
+	Xref              string
+	Name              []*NameRecord
+	Sex               string
+	Event             []*EventRecord
+	Attribute         []*EventRecord
+	Parents           []*FamilyLinkRecord
+	Family            []*FamilyLinkRecord
+	UserReference     []*UserReferenceRecord
+	AutomatedRecordId string
+	Change            ChangeRecord
+	Note              []*NoteRecord
+	Citation          []*CitationRecord
+	Media             []*MediaRecord
+	UserDefined       []UserDefinedTag
 }
 
 type MediaRecord struct {
+	Xref              string
+	File              []*FileRecord
+	UserReference     []*UserReferenceRecord
+	AutomatedRecordId string
+	Change            ChangeRecord
+	Note              []*NoteRecord
+	Citation          []*CitationRecord
+}
+
+type FileRecord struct {
+	Name       string
+	Format     string
+	FormatType string
+	Title      string
+}
+
+type UserReferenceRecord struct {
+	Number string
+	Type   string
+}
+
+type ChangeRecord struct {
+	Date string
+	Time string
+	Note []*NoteRecord
 }
 
 type RepositoryRecord struct {

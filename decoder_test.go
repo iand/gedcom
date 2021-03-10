@@ -67,6 +67,258 @@ func TestIndividual(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	// Create a comparison option that ignores events
+	eventOpt := cmp.Comparer(func(a, b []*EventRecord) bool {
+		return true
+	})
+
+	// Create a comparison option that compares just names
+	nameOpt := cmp.Comparer(func(a, b *NameRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		return a.Name == b.Name
+	})
+
+	// Create a comparison option that compares families by xref
+	familyOpt := cmp.Comparer(func(a, b *FamilyLinkRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		if a.Family == nil {
+			return b.Family == nil
+		}
+
+		if b.Family == nil {
+			return a.Family == nil
+		}
+
+		return a.Family.Xref == b.Family.Xref
+	})
+
+	// Create a comparison option that compares citations by source xref only
+	sourceOpt := cmp.Comparer(func(a, b *CitationRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		if a.Source == nil {
+			return b.Source == nil
+		}
+
+		if b.Source == nil {
+			return a.Source == nil
+		}
+
+		return a.Source.Xref == b.Source.Xref
+	})
+
+	// Create a comparison option that compares media files by name only
+	fileOpt := cmp.Comparer(func(a, b *MediaRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		if len(a.File) == 0 {
+			return len(b.File) == 0
+		}
+
+		if len(b.File) == 0 {
+			return len(a.File) == 0
+		}
+
+		return a.File[0].Name == b.File[0].Name
+	})
+
+	individuals := []*IndividualRecord{
+		{
+			Xref: "PERSON1",
+			Sex:  "M",
+			Name: []*NameRecord{
+				{
+					Name: "given name /surname/jr.",
+				},
+				{
+					Name: "another name /surname/",
+				},
+			},
+			Family: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "FAMILY1"},
+				},
+				{
+					Family: &FamilyRecord{Xref: "FAMILY2"},
+				},
+			},
+			Parents: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "PARENTS"},
+				},
+				{
+					Family: &FamilyRecord{Xref: "ADOPTIVE_PARENTS"},
+				},
+			},
+			Citation: []*CitationRecord{
+				{
+					Source: &SourceRecord{
+						Xref: "SOURCE1",
+					},
+				},
+			},
+
+			Change: ChangeRecord{
+				Date: "1 APR 1998",
+				Note: []*NoteRecord{
+					{
+						Note: "A note\nNote continued here. The word TEST should not be broken!",
+					},
+				},
+			},
+			Note: []*NoteRecord{
+				{
+					Note: "A note about the inidvidual\nNote continued here. The word TEST should not be broken!",
+				},
+			},
+			Media: []*MediaRecord{
+				{
+					File: []*FileRecord{
+						{
+							Name: `\\network\drive\path\file name.gif`,
+						},
+					},
+				},
+			}, UserDefined: []UserDefinedTag{
+				{Tag: "_MYOWNTAG", Value: "This is a non-standard tag. Not recommended but allowed", Level: 1},
+			},
+		},
+		{
+			Xref: "PERSON2",
+			Name: []*NameRecord{
+				{
+					Name: "/Wife/",
+				},
+			},
+			Sex: "F",
+			Family: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "FAMILY1"},
+				},
+			},
+		},
+		{
+			Xref: "PERSON3",
+			Name: []*NameRecord{
+				{
+					Name: "/Child 1/",
+				},
+			},
+			Parents: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "FAMILY1"},
+				},
+			},
+		},
+		{
+			Xref: "PERSON4",
+			Name: []*NameRecord{
+				{
+					Name: "/Child 2/",
+				},
+			},
+			Parents: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "FAMILY1"},
+				},
+			},
+		},
+		{
+			Xref: "PERSON5",
+			Sex:  "M",
+			Name: []*NameRecord{
+				{
+					Name: "/Father/",
+				},
+			},
+			Family: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "PARENTS"},
+				},
+			},
+		},
+		{
+			Xref: "PERSON6",
+			Name: []*NameRecord{
+				{
+					Name: "/Adoptive mother/",
+				},
+			},
+			Sex: "F",
+			Family: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "ADOPTIVE_PARENTS"},
+				},
+			},
+		},
+		{
+			Xref: "PERSON7",
+			Name: []*NameRecord{
+				{
+					Name: "/Child 3/",
+				},
+			},
+			Parents: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "FAMILY2"},
+				},
+			},
+		},
+		{
+			Xref: "PERSON8",
+			Name: []*NameRecord{
+				{
+					Name: "/2nd Wife/",
+				},
+			},
+			Sex: "F",
+			Family: []*FamilyLinkRecord{
+				{
+					Family: &FamilyRecord{Xref: "FAMILY2"},
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(individuals, g.Individual, eventOpt, familyOpt, nameOpt, sourceOpt, fileOpt); diff != "" {
+		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestIndividualDetail(t *testing.T) {
+	d := NewDecoder(bytes.NewReader(data))
+
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if len(g.Individual) != 8 {
 		t.Fatalf("Individual list length was %d, expected 8", len(g.Individual))
 	}
@@ -172,8 +424,8 @@ func TestIndividual(t *testing.T) {
 		t.Errorf("Individual 0, event 0 mismatch (-want +got):\n%s", diff)
 	}
 
-	if len(i1.Attribute) != 15 {
-		t.Fatalf(`Individual 0 had %d attributes, expected 15`, len(i1.Attribute))
+	if len(i1.Attribute) != 14 {
+		t.Fatalf(`Individual 0 had %d attributes, expected 14`, len(i1.Attribute))
 	}
 	att1 := &EventRecord{
 		Tag:   "CAST",
@@ -209,7 +461,7 @@ func TestIndividual(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(i1.Attribute[0], att1, sourceOpt); diff != "" {
+	if diff := cmp.Diff(att1, i1.Attribute[0], sourceOpt); diff != "" {
 		t.Errorf("Individual 0, attribute 0 mismatch (-want +got):\n%s", diff)
 	}
 
@@ -228,7 +480,7 @@ func TestSubmitter(t *testing.T) {
 
 	submitters := []*SubmitterRecord{{}}
 
-	if diff := cmp.Diff(g.Submitter, submitters); diff != "" {
+	if diff := cmp.Diff(submitters, g.Submitter); diff != "" {
 		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -267,6 +519,27 @@ func TestFamily(t *testing.T) {
 		return a.Tag == b.Tag && a.Date == b.Date
 	})
 
+	// Create a comparison option that compares citations by source xref
+	citeOpt := cmp.Comparer(func(a, b *CitationRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		if a.Source == nil {
+			return b.Source == nil
+		}
+
+		if b.Source == nil {
+			return a.Source == nil
+		}
+
+		return a.Source.Xref == b.Source.Xref
+	})
+
 	families := []*FamilyRecord{
 		{
 			Xref:    "FAMILY1",
@@ -276,6 +549,7 @@ func TestFamily(t *testing.T) {
 				{Xref: "PERSON3"},
 				{Xref: "PERSON4"},
 			},
+			NumberOfChildren: "42",
 			Event: []*EventRecord{
 				{Tag: "ANUL", Date: "31 DEC 1997"},
 				{Tag: "CENS", Date: "31 DEC 1997"},
@@ -288,6 +562,43 @@ func TestFamily(t *testing.T) {
 				{Tag: "MARL", Date: "31 DEC 1997"},
 				{Tag: "MARS", Date: "31 DEC 1997"},
 				{Tag: "EVEN", Date: "31 DEC 1997"},
+			},
+			Citation: []*CitationRecord{
+				{
+					Source: &SourceRecord{Xref: "SOURCE1"},
+				},
+			},
+			Change: ChangeRecord{
+				Date: "1 APR 1998",
+				Note: []*NoteRecord{
+					{
+						Note: "A note\nNote continued here. The word TEST should not be broken!",
+					},
+				},
+			},
+			Note: []*NoteRecord{
+				{
+					Note: "A note about the family\nNote continued here. The word TEST should not be broken!",
+				},
+			},
+			Media: []*MediaRecord{
+				{
+					File: []*FileRecord{
+						{
+							Name:   `\\network\drive\path\file name.bmp`,
+							Format: "bmp",
+							Title:  "A bmp picture",
+						},
+					},
+					Note: []*NoteRecord{
+						{
+							Note: "A note\nNote continued here. The word TEST should not be broken!",
+						},
+					},
+				},
+			},
+			UserDefined: []UserDefinedTag{
+				{Tag: "_MYOWNTAG", Value: "This is a non-standard tag. Not recommended but allowed", Level: 1},
 			},
 		},
 		{
@@ -314,7 +625,7 @@ func TestFamily(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(g.Family, families, indOpt, eventOpt); diff != "" {
+	if diff := cmp.Diff(families, g.Family, indOpt, eventOpt, citeOpt); diff != "" {
 		t.Errorf("family mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -348,7 +659,7 @@ func TestSource(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(g.Source, sources); diff != "" {
+	if diff := cmp.Diff(sources, g.Source); diff != "" {
 		t.Errorf("source mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -418,7 +729,7 @@ func TestHeader(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(g.Header, header); diff != "" {
+	if diff := cmp.Diff(header, g.Header); diff != "" {
 		t.Errorf("header mismatch (-want +got):\n%s", diff)
 	}
 }

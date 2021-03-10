@@ -248,6 +248,33 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 			f := &FamilyLinkRecord{Family: family}
 			i.Family = append(i.Family, f)
 			d.pushParser(makeFamilyLinkParser(d, f, level))
+		case "REFN":
+			r := &UserReferenceRecord{Number: value}
+			i.UserReference = append(i.UserReference, r)
+			d.pushParser(makeUserReferenceParser(d, r, level))
+		case "RIN":
+			i.AutomatedRecordId = value
+		case "CHAN":
+			d.pushParser(makeChangeParser(d, &i.Change, level))
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			i.Note = append(i.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			i.Citation = append(i.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "OBJE":
+			m := &MediaRecord{Xref: stripXref(value)}
+			i.Media = append(i.Media, m)
+			d.pushParser(makeMediaParser(d, m, level))
+		default:
+			i.UserDefined = append(i.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
 		}
 		return nil
 	}
@@ -456,7 +483,135 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 			e := &EventRecord{Tag: tag, Value: value}
 			f.Event = append(f.Event, e)
 			d.pushParser(makeEventParser(d, e, level))
+		case "NCHI":
+			f.NumberOfChildren = value
+		case "REFN":
+			r := &UserReferenceRecord{Number: value}
+			f.UserReference = append(f.UserReference, r)
+			d.pushParser(makeUserReferenceParser(d, r, level))
+		case "RIN":
+			f.AutomatedRecordId = value
+		case "CHAN":
+			d.pushParser(makeChangeParser(d, &f.Change, level))
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			f.Note = append(f.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			f.Citation = append(f.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "OBJE":
+			m := &MediaRecord{Xref: stripXref(value)}
+			f.Media = append(f.Media, m)
+			d.pushParser(makeMediaParser(d, m, level))
+		default:
+			f.UserDefined = append(f.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+		}
+		return nil
+	}
+}
 
+func makeMediaParser(d *Decoder, m *MediaRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "FILE":
+			var f *FileRecord
+			if len(m.File) == 0 {
+				f = &FileRecord{}
+				m.File = append(m.File, f)
+			} else {
+				f = m.File[len(m.File)-1]
+			}
+			f.Name = value
+			d.pushParser(makeMediaFileParser(d, f, level)) // version 5.5.1
+		case "FORM": // version 5.5
+			var f *FileRecord
+			if len(m.File) == 0 {
+				f = &FileRecord{}
+				m.File = append(m.File, f)
+			} else {
+				f = m.File[len(m.File)-1]
+			}
+			f.Format = value
+			d.pushParser(makeMediaFileFormatParser(d, f, level))
+		case "TITL": // version 5.5
+			var f *FileRecord
+			if len(m.File) == 0 {
+				f = &FileRecord{}
+				m.File = append(m.File, f)
+			} else {
+				f = m.File[len(m.File)-1]
+			}
+			f.Title = value
+		case "RIN":
+			m.AutomatedRecordId = value
+		case "REFN":
+			r := &UserReferenceRecord{Number: value}
+			m.UserReference = append(m.UserReference, r)
+			d.pushParser(makeUserReferenceParser(d, r, level))
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			m.Note = append(m.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			m.Citation = append(m.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "CHAN":
+			d.pushParser(makeChangeParser(d, &m.Change, level))
+
+		}
+
+		return nil
+	}
+}
+
+func makeMediaFileParser(d *Decoder, f *FileRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "FORM":
+			f.Format = value
+			d.pushParser(makeMediaFileFormatParser(d, f, level))
+		case "TITL":
+			f.Title = value
+		}
+		return nil
+	}
+}
+
+func makeMediaFileFormatParser(d *Decoder, f *FileRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TYPE":
+			f.FormatType = value
+		}
+		return nil
+	}
+}
+
+func makeUserReferenceParser(d *Decoder, r *UserReferenceRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TYPE":
+			r.Type = value
 		}
 		return nil
 	}
@@ -629,6 +784,38 @@ func makeDataSourceParser(d *Decoder, s *SystemRecord, minLevel int) parser {
 		case "COPR":
 			s.SourceCopyright = value
 			d.pushParser(makeTextParser(d, &s.SourceCopyright, level))
+		}
+		return nil
+	}
+}
+
+func makeChangeParser(d *Decoder, c *ChangeRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "DATE":
+			c.Date = value
+			d.pushParser(makeChangeTimeParser(d, c, level))
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			c.Note = append(c.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		}
+
+		return nil
+	}
+}
+
+func makeChangeTimeParser(d *Decoder, c *ChangeRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "Time":
+			c.Time = value
 		}
 		return nil
 	}
