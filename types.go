@@ -96,6 +96,7 @@ type MediaRecord struct {
 	Change            ChangeRecord
 	Note              []*NoteRecord
 	Citation          []*CitationRecord
+	UserDefined       []UserDefinedTag
 }
 
 type FileRecord struct {
@@ -117,22 +118,55 @@ type ChangeRecord struct {
 }
 
 type RepositoryRecord struct {
+	Xref string
 }
 
 type SourceRecord struct {
-	Xref  string
-	Title string
-	Media []*MediaRecord
-	Note  []*NoteRecord
+	Xref              string
+	Title             string
+	Data              *SourceDataRecord
+	Originator        string
+	FiledBy           string
+	PublicationFacts  string
+	Text              string
+	Repository        *SourceRepositoryRecord
+	UserReference     []*UserReferenceRecord
+	AutomatedRecordId string
+	Change            ChangeRecord
+	Note              []*NoteRecord
+	Media             []*MediaRecord
+	UserDefined       []UserDefinedTag
+}
+
+type SourceDataRecord struct {
+	Event []*SourceEventRecord
+}
+
+type SourceEventRecord struct {
+	Kind  string
+	Date  string
+	Place string
+}
+
+type SourceRepositoryRecord struct {
+	Repository *RepositoryRecord
+	Note       []*NoteRecord
+	CallNumber []*SourceCallNumberRecord
+}
+
+type SourceCallNumberRecord struct {
+	CallNumber string
+	MediaType  string
 }
 
 type CitationRecord struct {
-	Source *SourceRecord
-	Page   string
-	Data   DataRecord
-	Quay   string
-	Media  []*MediaRecord
-	Note   []*NoteRecord
+	Source      *SourceRecord
+	Page        string
+	Data        DataRecord
+	Quay        string
+	Media       []*MediaRecord
+	Note        []*NoteRecord
+	UserDefined []UserDefinedTag
 }
 
 type SubmitterRecord struct {
@@ -151,18 +185,23 @@ type DataRecord struct {
 }
 
 type EventRecord struct {
-	Tag      string
-	Value    string
-	Type     string
-	Date     string
-	Place    PlaceRecord
-	Address  AddressRecord
-	Age      string
-	Agency   string
-	Cause    string
-	Citation []*CitationRecord
-	Media    []*MediaRecord
-	Note     []*NoteRecord
+	Tag                  string
+	Value                string
+	Type                 string
+	Date                 string
+	Place                PlaceRecord
+	Address              AddressRecord
+	Age                  string
+	ResponsibleAgency    string
+	ReligiousAffiliation string
+	Cause                string
+	RestrictionNotice    string        // 5.5.1
+	ChildInFamily        *FamilyRecord // link to parent family for birth events
+	AdoptedByParent      string        // for adoption event, one of HUSB,WIFE,BOTH
+	Citation             []*CitationRecord
+	Media                []*MediaRecord
+	Note                 []*NoteRecord
+	UserDefined          []UserDefinedTag
 }
 
 type NoteRecord struct {
@@ -191,9 +230,9 @@ type AddressRecord struct {
 	PostalCode string
 	Country    string
 	Phone      []string
-	Email      []string
-	Fax        []string
-	WWW        []string
+	Email      []string // 5.5.1
+	Fax        []string // 5.5.1
+	WWW        []string // 5.5.1
 }
 
 // A UserDefinedTag is a tag that is not defined in the GEDCOM specification but is included by the publisher of the

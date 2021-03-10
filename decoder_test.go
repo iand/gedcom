@@ -387,11 +387,29 @@ func TestIndividualDetail(t *testing.T) {
 	if len(i1.Event) != 24 {
 		t.Fatalf(`Individual 0 had %d events, expected 24`, len(i1.Event))
 	}
+
+	// Create a comparison option that compares families by xref
+	familyOpt := cmp.Comparer(func(a, b *FamilyRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+
+		if b == nil {
+			return a == nil
+		}
+
+		return a.Xref == b.Xref
+	})
+
 	event1 := &EventRecord{
 		Tag:  "BIRT",
 		Date: "31 DEC 1997",
 		Place: PlaceRecord{
 			Name: "The place",
+		},
+
+		ChildInFamily: &FamilyRecord{
+			Xref: "PARENTS",
 		},
 		Citation: []*CitationRecord{
 			{
@@ -420,13 +438,14 @@ func TestIndividualDetail(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(i1.Event[0], event1, sourceOpt); diff != "" {
+	if diff := cmp.Diff(i1.Event[0], event1, sourceOpt, familyOpt); diff != "" {
 		t.Errorf("Individual 0, event 0 mismatch (-want +got):\n%s", diff)
 	}
 
 	if len(i1.Attribute) != 14 {
 		t.Fatalf(`Individual 0 had %d attributes, expected 14`, len(i1.Attribute))
 	}
+
 	att1 := &EventRecord{
 		Tag:   "CAST",
 		Value: "Cast name",
@@ -640,21 +659,58 @@ func TestSource(t *testing.T) {
 
 	sources := []*SourceRecord{
 		{
-			Xref:  "SOURCE1",
-			Title: "A bmp picture",
+			Xref: "SOURCE1",
+			Data: &SourceDataRecord{
+				Event: []*SourceEventRecord{
+					{
+						Kind:  "BIRT, CHR",
+						Date:  "FROM 1 JAN 1980 TO 1 FEB 1982",
+						Place: "Place",
+					},
+
+					{
+						Kind:  "DEAT",
+						Date:  "FROM 1 JAN 1980 TO 1 FEB 1982",
+						Place: "Another place",
+					},
+				},
+			},
+			Title:            "Title of source\nTitle continued here. The word TEST should not be broken!",
+			Originator:       "Author of source\nAuthor continued here. The word TEST should not be broken!",
+			FiledBy:          "Short title",
+			PublicationFacts: "Source publication facts\nPublication facts continued here. The word TEST should not be broken!",
+			Text:             "Citation from source\nCitation continued here. The word TEST should not be broken!",
+			Change: ChangeRecord{
+				Date: "1 APR 1998",
+				Note: []*NoteRecord{
+					{
+						Note: "A note\nNote continued here. The word TEST should not be broken!",
+					},
+				},
+			},
 			Note: []*NoteRecord{
-				{
-					Note: "A note about whatever\nNote continued here. The word TEST should not be broken!",
-				},
-				{
-					Note: "A note\nNote continued here. The word TEST should not be broken!",
-				},
 				{
 					Note: "A note about the family\nNote continued here. The word TEST should not be broken!",
 				},
+			},
+			Media: []*MediaRecord{
 				{
-					Note: "A note\nNote continued here. The word TEST should not be broken!",
+					File: []*FileRecord{
+						{
+							Name:   `\\network\drive\path\file name.bmp`,
+							Format: "bmp",
+							Title:  "A bmp picture",
+						},
+					},
+					Note: []*NoteRecord{
+						{
+							Note: "A note\nNote continued here. The word TEST should not be broken!",
+						},
+					},
 				},
+			},
+			UserDefined: []UserDefinedTag{
+				{Tag: "_MYOWNTAG", Value: "This is a non-standard tag. Not recommended but allowed", Level: 1},
 			},
 		},
 	}

@@ -190,6 +190,20 @@ func (d *Decoder) submission(xref string) *SubmissionRecord {
 	return ref
 }
 
+func (d *Decoder) repository(xref string) *RepositoryRecord {
+	if xref == "" {
+		return &RepositoryRecord{}
+	}
+
+	ref, found := d.refs[xref].(*RepositoryRecord)
+	if !found {
+		rec := &RepositoryRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	}
+	return ref
+}
+
 func makeRootParser(d *Decoder, g *Gedcom) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level == 0 {
@@ -233,11 +247,11 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 		case "BIRT", "CHR", "DEAT", "BURI", "CREM", "ADOP", "BAPM", "BARM", "BASM", "BLES", "CHRA", "CONF", "FCOM", "ORDN", "NATU", "EMIG", "IMMI", "CENS", "PROB", "WILL", "GRAD", "RETI", "EVEN":
 			e := &EventRecord{Tag: tag, Value: value}
 			i.Event = append(i.Event, e)
-			d.pushParser(makeEventParser(d, e, level))
+			d.pushParser(makeEventParser(d, tag, e, level))
 		case "CAST", "DSCR", "EDUC", "IDNO", "NATI", "NCHI", "NMR", "OCCU", "PROP", "RELI", "RESI", "SSN", "TITL", "FACT":
 			e := &EventRecord{Tag: tag, Value: value}
 			i.Attribute = append(i.Attribute, e)
-			d.pushParser(makeEventParser(d, e, level))
+			d.pushParser(makeEventParser(d, tag, e, level))
 		case "FAMC":
 			family := d.family(stripXref(value))
 			f := &FamilyLinkRecord{Family: family}
@@ -307,14 +321,119 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
+		case "DATA":
+			if s.Data == nil {
+				s.Data = &SourceDataRecord{}
+			}
+			d.pushParser(makeSourceDataParser(d, s.Data, level))
 		case "TITL":
 			s.Title = value
 			d.pushParser(makeTextParser(d, &s.Title, level))
+		case "ABBR":
+			s.FiledBy = value
+		case "AUTH":
+			s.Originator = value
+			d.pushParser(makeTextParser(d, &s.Originator, level))
+		case "PUBL":
+			s.PublicationFacts = value
+			d.pushParser(makeTextParser(d, &s.PublicationFacts, level))
+		case "TEXT":
+			s.Text = value
+			d.pushParser(makeTextParser(d, &s.Text, level))
+		case "REPO":
+			repo := d.repository(stripXref(value))
+			s.Repository = &SourceRepositoryRecord{Repository: repo}
+			d.pushParser(makeSourceRepositoruParser(d, s.Repository, level))
 
+		case "REFN":
+			r := &UserReferenceRecord{Number: value}
+			s.UserReference = append(s.UserReference, r)
+			d.pushParser(makeUserReferenceParser(d, r, level))
+		case "RIN":
+			s.AutomatedRecordId = value
+		case "CHAN":
+			d.pushParser(makeChangeParser(d, &s.Change, level))
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			s.Note = append(s.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		case "OBJE":
+			m := &MediaRecord{Xref: stripXref(value)}
+			s.Media = append(s.Media, m)
+			d.pushParser(makeMediaParser(d, m, level))
+		default:
+			s.UserDefined = append(s.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+		}
+
+		return nil
+	}
+}
+
+func makeSourceDataParser(d *Decoder, s *SourceDataRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "EVEN":
+			se := &SourceEventRecord{Kind: value}
+			s.Event = append(s.Event, se)
+			d.pushParser(makeSourceEventParser(d, se, level))
+		}
+
+		return nil
+	}
+}
+
+func makeSourceEventParser(d *Decoder, s *SourceEventRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "DATE":
+			s.Date = value
+		case "PLAC":
+			s.Place = value
+		}
+
+		return nil
+	}
+}
+
+func makeSourceRepositoruParser(d *Decoder, s *SourceRepositoryRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			s.Note = append(s.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		case "CALN":
+			r := &SourceCallNumberRecord{CallNumber: value}
+			s.CallNumber = append(s.CallNumber, r)
+			d.pushParser(makeSourceCallNumberParser(d, r, level))
+		}
+
+		return nil
+	}
+}
+
+func makeSourceCallNumberParser(d *Decoder, s *SourceCallNumberRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "MEDI":
+			s.MediaType = value
 		}
 
 		return nil
@@ -337,6 +456,13 @@ func makeCitationParser(d *Decoder, c *CitationRecord, minLevel int) parser {
 			d.pushParser(makeNoteParser(d, r, level))
 		case "DATA":
 			d.pushParser(makeDataParser(d, &c.Data, level))
+		default:
+			c.UserDefined = append(c.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
 
 		}
 
@@ -397,11 +523,29 @@ func makeDataParser(d *Decoder, r *DataRecord, minLevel int) parser {
 	}
 }
 
-func makeEventParser(d *Decoder, e *EventRecord, minLevel int) parser {
+func makeEventParser(d *Decoder, parentTag string, e *EventRecord, minLevel int) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level <= minLevel {
 			return d.popParser(level, tag, value, xref)
 		}
+
+		// Some special case handling
+		switch parentTag {
+		case "BIRT", "CHR":
+			if tag == "FAMC" {
+				family := d.family(stripXref(value))
+				e.ChildInFamily = family
+				return nil
+			}
+		case "ADOP":
+			if tag == "FAMC" {
+				family := d.family(stripXref(value))
+				e.ChildInFamily = family
+				d.pushParser(makeEventAdoptParser(d, e, level))
+				return nil
+			}
+		}
+
 		switch tag {
 		case "TYPE":
 			e.Type = value
@@ -413,14 +557,49 @@ func makeEventParser(d *Decoder, e *EventRecord, minLevel int) parser {
 		case "ADDR":
 			e.Address.Full = value
 			d.pushParser(makeAddressParser(d, &e.Address, level))
-		case "SOUR":
-			c := &CitationRecord{Source: d.source(stripXref(value))}
-			e.Citation = append(e.Citation, c)
-			d.pushParser(makeCitationParser(d, c, level))
+		case "AGNC":
+			e.ResponsibleAgency = value
+		case "RELI":
+			e.ReligiousAffiliation = value
+		case "CAUS":
+			e.Cause = value
+		case "RESN":
+			e.RestrictionNotice = value
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			e.Note = append(e.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			e.Citation = append(e.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "OBJE":
+			m := &MediaRecord{Xref: stripXref(value)}
+			e.Media = append(e.Media, m)
+			d.pushParser(makeMediaParser(d, m, level))
+		default:
+
+			e.UserDefined = append(e.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+		}
+
+		return nil
+	}
+}
+
+func makeEventAdoptParser(d *Decoder, e *EventRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+
+		switch tag {
+		case "ADOP":
+			e.AdoptedByParent = value
 		}
 
 		return nil
@@ -482,7 +661,7 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN":
 			e := &EventRecord{Tag: tag, Value: value}
 			f.Event = append(f.Event, e)
-			d.pushParser(makeEventParser(d, e, level))
+			d.pushParser(makeEventParser(d, tag, e, level))
 		case "NCHI":
 			f.NumberOfChildren = value
 		case "REFN":
@@ -569,6 +748,13 @@ func makeMediaParser(d *Decoder, m *MediaRecord, minLevel int) parser {
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &m.Change, level))
 
+		default:
+			m.UserDefined = append(m.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
 		}
 
 		return nil
