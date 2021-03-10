@@ -226,6 +226,13 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				obj := d.source(xref)
 				g.Source = append(g.Source, obj)
 				d.pushParser(makeSourceParser(d, obj, level))
+			default:
+				g.UserDefined = append(g.UserDefined, UserDefinedTag{
+					Tag:   tag,
+					Value: value,
+					Xref:  xref,
+					Level: level,
+				})
 			}
 		}
 		return nil

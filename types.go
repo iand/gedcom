@@ -6,14 +6,15 @@ information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 package gedcom
 
 type Gedcom struct {
-	Header     *Header
-	Family     []*FamilyRecord
-	Individual []*IndividualRecord
-	Media      []*MediaRecord
-	Repository []*RepositoryRecord
-	Source     []*SourceRecord
-	Submitter  []*SubmitterRecord
-	Trailer    *Trailer
+	Header      *Header
+	Family      []*FamilyRecord
+	Individual  []*IndividualRecord
+	Media       []*MediaRecord
+	Repository  []*RepositoryRecord
+	Source      []*SourceRecord
+	Submitter   []*SubmitterRecord
+	Trailer     *Trailer
+	UserDefined []UserDefinedTag
 }
 
 // A Header contains information about the GEDCOM file.
