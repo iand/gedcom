@@ -162,10 +162,41 @@ func (d *Decoder) source(xref string) *SourceRecord {
 	return ref
 }
 
+func (d *Decoder) submitter(xref string) *SubmitterRecord {
+	if xref == "" {
+		return &SubmitterRecord{}
+	}
+
+	ref, found := d.refs[xref].(*SubmitterRecord)
+	if !found {
+		rec := &SubmitterRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	}
+	return ref
+}
+
+func (d *Decoder) submission(xref string) *SubmissionRecord {
+	if xref == "" {
+		return &SubmissionRecord{}
+	}
+
+	ref, found := d.refs[xref].(*SubmissionRecord)
+	if !found {
+		rec := &SubmissionRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	}
+	return ref
+}
+
 func makeRootParser(d *Decoder, g *Gedcom) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level == 0 {
 			switch tag {
+			case "HEAD":
+				g.Header = &Header{}
+				d.pushParser(makeHeaderParser(d, g.Header, level))
 			case "INDI":
 				obj := d.individual(xref)
 				g.Individual = append(g.Individual, obj)
@@ -437,6 +468,30 @@ func makeAddressParser(d *Decoder, a *AddressRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
+		case "ADDR":
+			a.Full = value
+			d.pushParser(makeAddressDetailParser(d, a, level))
+		case "PHON":
+			a.Phone = append(a.Phone, value)
+		case "EMAIL":
+			a.Email = append(a.Email, value)
+		case "FAX":
+			a.Fax = append(a.Fax, value)
+		case "WWW":
+			a.WWW = append(a.WWW, value)
+
+		}
+
+		return nil
+	}
+}
+
+func makeAddressDetailParser(d *Decoder, a *AddressRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
 		case "CONT":
 			a.Full = a.Full + "\n" + value
 		case "ADR1":
@@ -451,11 +506,130 @@ func makeAddressParser(d *Decoder, a *AddressRecord, minLevel int) parser {
 			a.PostalCode = value
 		case "CTRY":
 			a.Country = value
-		case "PHON":
-			a.Phone = value
-
 		}
 
+		return nil
+	}
+}
+
+func makeHeaderParser(d *Decoder, h *Header, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "SOUR":
+			h.SourceSystem.Xref = value
+			d.pushParser(makeSystemParser(d, &h.SourceSystem, level))
+		case "DEST":
+			h.Destination = value
+		case "DATE":
+			h.Date = value
+			d.pushParser(makeHeaderTimeParser(d, h, level))
+		case "FILE":
+			h.Filename = value
+		case "COPR":
+			h.Copyright = value
+		case "GEDC":
+			d.pushParser(makeHeaderVersionParser(d, h, level))
+		case "LANG":
+			h.Language = value
+		case "NOTE":
+			h.Note = value
+			d.pushParser(makeTextParser(d, &h.Note, level))
+		case "SUBM":
+			h.Submitter = d.submitter(stripXref(value))
+		case "SUBN":
+			h.Submission = d.submission(stripXref(value))
+		case "CHAR":
+			h.CharacterSet = value
+			d.pushParser(makeHeaderCharacterSetVersionParser(d, h, level))
+		default:
+			h.UserDefined = append(h.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+		}
+		return nil
+	}
+}
+
+func makeHeaderTimeParser(d *Decoder, h *Header, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TIME":
+			h.Time = value
+		}
+		return nil
+	}
+}
+
+func makeHeaderVersionParser(d *Decoder, h *Header, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "VERS":
+			h.Version = value
+		case "FORM":
+			h.Form = value
+		}
+		return nil
+	}
+}
+
+func makeHeaderCharacterSetVersionParser(d *Decoder, h *Header, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "VERS":
+			h.CharacterSetVersion = value
+		}
+		return nil
+	}
+}
+
+func makeSystemParser(d *Decoder, s *SystemRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "VERS":
+			s.Version = value
+		case "NAME":
+			s.ProductName = value
+		case "CORP":
+			s.BusinessName = value
+			d.pushParser(makeAddressParser(d, &s.Address, level))
+		case "DATA":
+			s.SourceName = value
+			d.pushParser(makeDataSourceParser(d, s, level))
+		}
+		return nil
+	}
+}
+
+func makeDataSourceParser(d *Decoder, s *SystemRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "DATE":
+			s.SourceDate = value
+		case "COPR":
+			s.SourceCopyright = value
+			d.pushParser(makeTextParser(d, &s.SourceCopyright, level))
+		}
 		return nil
 	}
 }

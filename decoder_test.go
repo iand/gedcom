@@ -352,3 +352,73 @@ func TestSource(t *testing.T) {
 		t.Errorf("source mismatch (-want +got):\n%s", diff)
 	}
 }
+
+func TestHeader(t *testing.T) {
+	d := NewDecoder(bytes.NewReader(data))
+
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	header := &Header{
+		SourceSystem: SystemRecord{
+			Xref:         "APPROVED_SOURCE_NAME",
+			Version:      "Version number of source-program",
+			ProductName:  "Name of source-program",
+			BusinessName: "Corporation name",
+			Address: AddressRecord{
+				Full:       "Corporation address line 1\nCorporation address line 2\nCorporation address line 3\nCorporation address line 4",
+				Line1:      "Corporation address line 1",
+				Line2:      "Corporation address line 2",
+				City:       "Corporation address city",
+				State:      "Corporation address state",
+				PostalCode: "Corporation address ZIP code",
+				Country:    "Corporation address country",
+				Phone: []string{
+					"Corporation phone number 1",
+					"Corporation phone number 2",
+					"Corporation phone number 3 (last one!)",
+				},
+			},
+			SourceName:      "Name of source data",
+			SourceDate:      "1 JAN 1998",
+			SourceCopyright: "Copyright of source data",
+		},
+		Destination:         "Destination of transmission",
+		Date:                "1 JAN 1998",
+		Time:                "13:57:24.80",
+		Submitter:           &SubmitterRecord{Xref: "SUBMITTER"},
+		Submission:          &SubmissionRecord{Xref: "SUBMISSION"},
+		Filename:            "ALLGED.GED",
+		Copyright:           "(C) 1997-2000 by H. Eichmann. You can use and distribute this file freely as long as you do not charge for it",
+		Version:             "5.5",
+		Form:                "LINEAGE-LINKED",
+		CharacterSet:        "ASCII",
+		CharacterSetVersion: "Version number of ASCII (whatever it means) ",
+		Language:            "language",
+		Note: "A general note about this file:" + "\n" +
+			"It demonstrates most of the data which can be submitted using GEDCOM5.5. It shows the relatives of PERSON1:" + "\n" +
+			"His 2 wifes (PERSON2, PERSON8), his parents (father: PERSON5, mother not given), " + "\n" +
+			"adoptive parents (mother: PERSON6, father not given) and his 3 children (PERSON3, PERSON4 and PERSON7)." + "\n" +
+			"In PERSON1, FAMILY1, SUBMITTER, SUBMISSION and SOURCE1 as many datafields as possible are used." + "\n" +
+			"All other individuals/families contain no data. Note, that many data tags can appear more than once" + "\n" +
+			"(in this transmission this is demonstrated with tags: NAME, OCCU, PLACE and NOTE. Seek the word 'another'." + "\n" +
+			"The data transmitted here do not make sence. Just the HEAD.DATE tag contains the date of the creation" + "\n" +
+			"of this file and will change in future Versions!" + "\n" +
+			"This file is created by H. Eichmann: h.eichmann@@gmx.de. Feel free to copy and use it for any " + "\n" +
+			"non-commercial purpose. For the creation the GEDCOM standard Release 5.5 (2 JAN 1996) has been used." + "\n" +
+			"Copyright: The church of Jesus Christ of latter-day saints, gedcom@@gedcom.org" + "\n" +
+			"Download it (the GEDCOM 5.5 specs) from: ftp.gedcom.com/pub/genealogy/gedcom." + "\n" +
+			"Some Specials: This line is very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long but not too long (255 caharcters is the limit). " + "\n" +
+			"This @@ (commercial at) character may only appear ONCE!" + "\n" +
+			"Note continued here. The word TEST should not be broken!",
+		UserDefined: []UserDefinedTag{
+			{Tag: "_MYOWNTAG", Value: "This is a non-standard tag. Not recommended but allowed", Level: 1},
+		},
+	}
+
+	if diff := cmp.Diff(g.Header, header); diff != "" {
+		t.Errorf("header mismatch (-want +got):\n%s", diff)
+	}
+}

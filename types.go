@@ -6,23 +6,39 @@ information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 package gedcom
 
 type Gedcom struct {
-	Header           *Header
-	SubmissionRecord *SubmissionRecord
-	Family           []*FamilyRecord
-	Individual       []*IndividualRecord
-	Media            []*MediaRecord
-	Repository       []*RepositoryRecord
-	Source           []*SourceRecord
-	Submitter        []*SubmitterRecord
-	Trailer          *Trailer
+	Header     *Header
+	Family     []*FamilyRecord
+	Individual []*IndividualRecord
+	Media      []*MediaRecord
+	Repository []*RepositoryRecord
+	Source     []*SourceRecord
+	Submitter  []*SubmitterRecord
+	Trailer    *Trailer
 }
 
+// A Header contains information about the GEDCOM file.
 type Header struct {
-	SourceSystem SystemRecord
+	SourceSystem        SystemRecord
+	Destination         string
+	Date                string
+	Time                string
+	Submitter           *SubmitterRecord
+	Submission          *SubmissionRecord
+	Filename            string
+	Copyright           string
+	Version             string
+	Form                string
+	CharacterSet        string
+	CharacterSetVersion string
+	Language            string
+	Place               PlaceRecord
+	Note                string
+	UserDefined         []UserDefinedTag
 }
 
+// A SystemRecord contains information about the system that produced the GEDCOM.
 type SystemRecord struct {
-	Id              string
+	Xref            string
 	Version         string
 	ProductName     string
 	BusinessName    string
@@ -80,6 +96,7 @@ type CitationRecord struct {
 }
 
 type SubmitterRecord struct {
+	Xref string
 }
 
 type NameRecord struct {
@@ -133,5 +150,17 @@ type AddressRecord struct {
 	State      string
 	PostalCode string
 	Country    string
-	Phone      string
+	Phone      []string
+	Email      []string
+	Fax        []string
+	WWW        []string
+}
+
+// A UserDefinedTag is a tag that is not defined in the GEDCOM specification but is included by the publisher of the
+// data. In GEDCOM user defined tags must be prefixed with an underscore. This is preserved in the Tag field.
+type UserDefinedTag struct {
+	Tag   string
+	Value string
+	Xref  string
+	Level int
 }
