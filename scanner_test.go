@@ -5,6 +5,8 @@ information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 package gedcom
 
 import (
+	"bytes"
+	"errors"
 	"io"
 	"testing"
 )
@@ -31,51 +33,88 @@ var examples = []example{
 }
 
 func TestNextTagFound(t *testing.T) {
-	s := &scanner{}
 	for _, ex := range examples {
-		s.reset()
-		offset, err := s.nextTag(ex.input)
-		if err != nil {
-			t.Fatalf(`nextTag for "%s" returned error "%v", expected no error`, ex.input, err)
+		s := newScanner(bytes.NewReader(ex.input))
+		if !s.next() {
+			if s.err != nil {
+				t.Fatalf(`nextTag for "%s" returned error "%v", expected no error`, ex.input, s.err)
+			}
 		}
-
-		if offset == 0 {
-			t.Fatalf(`nextTag for "%s" did not find tag, expected it to find`, ex.input)
-		}
-
 		if s.level != ex.level {
 			t.Errorf(`nextTag for "%s" returned level %d, expected %d`, ex.input, s.level, ex.level)
 		}
 
-		if string(s.tag) != ex.tag {
+		if s.tag != ex.tag {
 			t.Errorf(`nextTag for "%s" returned tag "%s", expected "%s"`, ex.input, s.tag, ex.tag)
 		}
 
-		if string(s.value) != ex.value {
+		if s.value != ex.value {
 			t.Errorf(`nextTag for "%s" returned value "%s", expected "%s"`, ex.input, s.value, ex.value)
 		}
 
-		if string(s.xref) != ex.xref {
+		if s.xref != ex.xref {
 			t.Errorf(`nextTag for "%s" returned xref "%s", expected "%s"`, ex.input, s.xref, ex.xref)
+		}
+
+		if s.next() {
+			t.Errorf(`got another tag for %q, wanted no tag`, ex)
 		}
 
 	}
 }
 
 var examplesNot = [][]byte{
+	// These are not terminated by a newline
 	[]byte("1 SEX F"),
 	[]byte(" 1 SEX F "),
 }
 
 func TestNextTagNotFound(t *testing.T) {
-	s := &scanner{}
 	for _, ex := range examplesNot {
-		s.reset()
-		_, err := s.nextTag(ex)
-
-		if err != io.EOF {
-			t.Fatalf(`nextTag for "%s" returned unexpected error "%v", expected io.EOF`, ex, err)
+		s := newScanner(bytes.NewReader(ex))
+		if s.next() {
+			t.Fatalf(`got tag for %q, wanted no tag`, ex)
+		}
+		if !errors.Is(s.err, io.ErrUnexpectedEOF) {
+			t.Errorf("got error %v, wanted %v", s.err, io.ErrUnexpectedEOF)
 		}
 
+	}
+}
+
+func TestWindowsLineEndings(t *testing.T) {
+	input := []byte("0 HEAD\r\n1 CHAR UTF-8\r\n1 GEDC\r\n")
+
+	s := newScanner(bytes.NewReader(input))
+	if !s.next() {
+		t.Fatalf("missing first tag, err=%v", s.err)
+	}
+
+	if s.level != 0 {
+		t.Errorf("first tag, got level %d, wanted %d", s.level, 0)
+	}
+
+	if !s.next() {
+		t.Fatalf("missing second tag, err=%v", s.err)
+	}
+
+	if s.level != 1 {
+		t.Errorf("second tag, got level %d, wanted %d", s.level, 1)
+	}
+
+	if !s.next() {
+		t.Fatalf("missing third tag, err=%v", s.err)
+	}
+
+	if s.level != 1 {
+		t.Errorf("third tag, got level %d, wanted %d", s.level, 1)
+	}
+
+	if s.next() {
+		t.Errorf("got an unexpected tag")
+	}
+
+	if s.err != nil {
+		t.Errorf("got an unexpected error: %v", s.err)
 	}
 }

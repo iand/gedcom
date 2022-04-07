@@ -13,12 +13,24 @@ import (
 
 // A scanner is a GEDCOM scanning state machine.
 type scanner struct {
-	parseState int
-	tokenStart int
-	level      int
-	tag        []byte
-	value      []byte
-	xref       []byte
+	r      io.RuneScanner
+	err    error
+	state  int
+	line   int
+	offset int
+	level  int
+	buf    []rune
+	tag    string
+	value  string
+	xref   string
+}
+
+func newScanner(r io.RuneScanner) *scanner {
+	return &scanner{
+		r:     r,
+		state: stateBegin,
+		buf:   make([]rune, 0, 4),
+	}
 }
 
 const (
@@ -34,140 +46,179 @@ const (
 	stateError
 )
 
-func (s *scanner) reset() {
-	s.parseState = stateBegin
-	s.tokenStart = 0
+func (s *scanner) next() bool {
+	s.state = stateBegin
 	s.level = 0
-	s.xref = make([]byte, 0)
-	s.tag = make([]byte, 0)
-	s.value = make([]byte, 0)
-}
+	s.buf = s.buf[:0]
+	s.xref = ""
+	s.tag = ""
+	s.value = ""
+	s.offset = 0
+	s.line++
 
-func (s *scanner) nextTag(data []byte) (offset int, err error) {
-	for i, c := range data {
-		switch s.parseState {
+	for {
+		c, n, err := s.r.ReadRune()
+		if err != nil {
+			if err != io.EOF {
+				s.state = stateError
+				s.err = fmt.Errorf("read: %w", err)
+			}
+
+			if s.state != stateEnd && s.state != stateBegin {
+				s.state = stateError
+				s.err = io.ErrUnexpectedEOF
+			}
+
+			return false
+		}
+		s.offset += n
+
+		switch s.state {
 		case stateBegin:
 			switch {
 			case c >= '0' && c <= '9':
-				s.tokenStart = i
-				s.parseState = stateLevel
+				s.buf = append(s.buf, c)
+				s.state = stateLevel
 			case isSpace(c):
 				continue
 			default:
-				s.parseState = stateError
-				err = fmt.Errorf("found non-whitespace %q (%#[1]x) before level at offset %d", c, i)
-				return
+				s.state = stateError
+				s.err = fmt.Errorf("found non-whitespace %q (%#[1]x) before level", c)
+				return false
 			}
 		case stateLevel:
 			switch {
 			case c >= '0' && c <= '9':
+				s.buf = append(s.buf, c)
 				continue
 			case c == ' ':
-				parsedLevel, perr := strconv.ParseInt(string(data[s.tokenStart:i]), 10, 64)
+				parsedLevel, perr := strconv.ParseInt(string(s.buf), 10, 64)
 				if perr != nil {
-					err = perr
-					return
+					s.err = fmt.Errorf("parse level: %w", perr)
+					return false
 				}
 				s.level = int(parsedLevel)
-				s.parseState = stateSeekTagOrXref
+				s.buf = s.buf[:0]
+				s.state = stateSeekTagOrXref
 			default:
-				s.parseState = stateError
-				err = fmt.Errorf("level contained non-numerics")
-				return
+				s.state = stateError
+				s.err = fmt.Errorf("level contained non-numerics")
+				return false
 			}
 
 		case stateSeekTag:
 			switch {
 			case isAlphaNumeric(c):
-				s.tokenStart = i
-				s.parseState = stateTag
+				s.buf = append(s.buf, c)
+				s.state = stateTag
 			case c == ' ':
 				continue
 			default:
-				s.parseState = stateError
-				err = fmt.Errorf("tag %q contained non-alphanumeric", string(data[s.tokenStart:i]))
-				return
+				s.state = stateError
+				s.err = fmt.Errorf("tag contained non-alphanumeric (%#x)", c)
+				return false
 			}
 		case stateSeekTagOrXref:
 			switch {
 			case isAlphaNumeric(c):
-				s.tokenStart = i
-				s.parseState = stateTag
+				s.buf = append(s.buf, c)
+				s.state = stateTag
 			case c == '@':
-				s.tokenStart = i
-				s.parseState = stateXref
+				s.state = stateXref
 			case c == ' ':
 				continue
 			default:
-				s.parseState = stateError
-				err = fmt.Errorf("xref %q contained non-alphanumeric", string(data[s.tokenStart:i]))
-				return
+				s.state = stateError
+				s.err = fmt.Errorf("tag or xref contained non-alphanumeric (%#x)", c)
+				return false
 			}
 
 		case stateTag:
 			switch {
 			case isAlphaNumeric(c):
+				s.buf = append(s.buf, c)
 				continue
 			case c == '\n' || c == '\r':
-				s.tag = data[s.tokenStart:i]
-				s.parseState = stateEnd
-				offset = i
-				return
+				s.tag = string(s.buf)
+				s.buf = s.buf[:0]
+				s.state = stateEnd
+				return true
 			case c == ' ':
-				s.tag = data[s.tokenStart:i]
-				s.parseState = stateSeekValue
+				s.tag = string(s.buf)
+				s.buf = s.buf[:0]
+				s.state = stateSeekValue
 			default:
-				s.parseState = stateError
-				err = fmt.Errorf("tag contained non-alphanumeric")
-				return
+				s.state = stateError
+				s.err = fmt.Errorf("tag contained non-alphanumeric (%#x)", c)
+				return false
 			}
 
 		case stateXref:
 			switch {
-			case isAlphaNumeric(c) || c == '@':
+			case isAlphaNumeric(c):
+				s.buf = append(s.buf, c)
+				continue
+			case c == '@':
 				continue
 			case c == ' ':
-				s.xref = data[s.tokenStart+1 : i-1]
-				s.parseState = stateSeekTag
+				s.xref = string(s.buf)
+				s.buf = s.buf[:0]
+				s.state = stateSeekTag
 			default:
-				s.parseState = stateError
-				err = fmt.Errorf("xref contained non-alphanumeric")
-				return
+				s.state = stateError
+				s.err = fmt.Errorf("xref contained non-alphanumeric (%#x)", c)
+				return false
 			}
 		case stateSeekValue:
 			switch {
 			case c == '\n' || c == '\r':
-				s.parseState = stateEnd
-				offset = i
-				return
+				s.state = stateEnd
+				return true
 			case c == ' ':
 				continue
 			default:
-				s.tokenStart = i
-				s.parseState = stateValue
+				s.buf = append(s.buf, c)
+				s.state = stateValue
 			}
 
 		case stateValue:
 			switch {
 			case c == '\n' || c == '\r':
-				s.value = data[s.tokenStart:i]
-				s.parseState = stateEnd
-				offset = i
-				return
+				// Check to see if there is a malformed NOTE that contains an embedded newline
+				// For example, Ancestry GEDCOM exports that include source "London, England, Church of England Births and Baptisms, 1813-1917"
+				// have the following NOTE tag split over two lines (yet the CONC tag is correctly formatted!)
+				//
+				//   1 NOTE Board of Guardian Records and Church of England Parish Registers. London Metropolitan Archives, London.
+				//   <p>Images produced by permission of the City of London Corporation. The City of London gives n
+
+				if s.tag == "NOTE" {
+					next, _, err := s.r.ReadRune()
+					s.r.UnreadRune()
+					if err == nil {
+						if !isAlphaNumeric(next) {
+							// Looks like it might be a malformed note, so continue parsing
+							s.buf = append(s.buf, '\n')
+							continue
+						}
+					}
+				}
+
+				s.value = string(s.buf)
+				s.buf = s.buf[:0]
+				s.state = stateEnd
+				return true
 			default:
+				s.buf = append(s.buf, c)
 				continue
 			}
-
 		}
 	}
-
-	return 0, io.EOF
 }
 
-func isSpace(c byte) bool {
+func isSpace(c rune) bool {
 	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
 }
 
-func isAlphaNumeric(c byte) bool {
+func isAlphaNumeric(c rune) bool {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
 }

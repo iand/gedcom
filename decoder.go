@@ -7,6 +7,7 @@ information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 package gedcom
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"strings"
@@ -14,27 +15,16 @@ import (
 
 // A Decoder reads and decodes GEDCOM objects from an input stream.
 type Decoder struct {
-	r          io.Reader
-	parsers    []parser
-	refs       map[string]interface{}
-	bufferSize int
+	r       *bufio.Reader
+	parsers []parser
+	refs    map[string]interface{}
 }
 
 // NewDecoder returns a new decoder that reads r.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
-		r:          r,
-		bufferSize: 512,
+		r: bufio.NewReader(r),
 	}
-}
-
-// SetBufferSize sets the size of the buffer used to hold data while decoding. Larger values will reduce the number
-// of reads needed but will increase memory used. The default value is 512 bytes.
-func (d *Decoder) SetBufferSize(n int) {
-	if n < 1 {
-		panic("buffer size must be greater than zero")
-	}
-	d.bufferSize = n
 }
 
 // Decode reads the next GEDCOM-encoded value from its
@@ -59,46 +49,15 @@ func (d *Decoder) Decode() (*Gedcom, error) {
 }
 
 func (d *Decoder) scan(g *Gedcom) error {
-	s := &scanner{}
-	buf := make([]byte, d.bufferSize)
-
-	n, err := d.r.Read(buf)
-	if err != nil {
-		return fmt.Errorf("read input: %w", err)
-	}
-	for n > 0 {
-		pos := 0
-
-		for {
-			s.reset()
-			offset, err := s.nextTag(buf[pos:n])
-			pos += offset
-
-			if err != nil {
-				if err != io.EOF {
-					return fmt.Errorf("read next tag: %w", err)
-				}
-				break
-			}
-
-			d.parsers[len(d.parsers)-1](s.level, string(s.tag), string(s.value), string(s.xref))
-
-		}
-
-		// shift unparsed bytes to start of buffer
-		rest := copy(buf, buf[pos:])
-
-		// top up buffer
-		num, err := d.r.Read(buf[rest:])
-		if err != nil {
-			if err != io.EOF {
-				return fmt.Errorf("read remaining data: %w", err)
+	s := newScanner(d.r)
+	for {
+		if !s.next() {
+			if s.err != nil {
+				return fmt.Errorf("scan error (line:%d, position:%d): %w", s.line, s.offset, s.err)
 			}
 			break
 		}
-
-		n = rest + num - 1
-
+		d.parsers[len(d.parsers)-1](s.level, s.tag, s.value, s.xref)
 	}
 
 	return nil

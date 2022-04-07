@@ -8,6 +8,7 @@ package gedcom
 import (
 	"bytes"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -819,6 +820,43 @@ func TestIndividualAlia(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(individual, g.Individual[0]); diff != "" {
-		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
+		t.Errorf("individual mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestFixupAncestryBadNode(t *testing.T) {
+	f, err := os.Open("testdata/badnote.ged")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	d := NewDecoder(f)
+
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(g.Source) == 0 {
+		t.Fatalf("no source was decoded")
+	}
+
+	want := &SourceRecord{
+		Xref:             "S507927087",
+		Title:            "London, England, Church of England Births and Baptisms, 1813-1917",
+		Originator:       "Ancestry.com",
+		PublicationFacts: "Ancestry.com Operations, Inc.",
+		Note: []*NoteRecord{
+			{
+				Note: "Board of Guardian Records and Church of England Parish Registers. London Metropolitan Archives, London.\n<p>Images produced by permission of the City of London Corporation. The City of London gives no warranty as to the accuracy, completeness or fitness for the purpose of the information provided. Images may be used only for purposes of research, private study or education. Applications for any other use should be made to London Metropolitan Archives, 40 Northampton Road, London EC1R 0HB. Email -   ask.lma@@cityoflondon.gov.uk. Infringement of the above condition may result in legal action.</p>",
+			},
+		},
+		UserDefined: []UserDefinedTag{
+			{Tag: "_APID", Value: "1,1558::0", Level: 1},
+		},
+	}
+
+	if diff := cmp.Diff(want, g.Source[0]); diff != "" {
+		t.Errorf("source mismatch (-want +got):\n%s", diff)
 	}
 }
