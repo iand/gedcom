@@ -66,7 +66,6 @@ func (d *Decoder) scan(g *Gedcom) error {
 	if err != nil {
 		return fmt.Errorf("read input: %w", err)
 	}
-
 	for n > 0 {
 		pos := 0
 
@@ -74,6 +73,7 @@ func (d *Decoder) scan(g *Gedcom) error {
 			s.reset()
 			offset, err := s.nextTag(buf[pos:n])
 			pos += offset
+
 			if err != nil {
 				if err != io.EOF {
 					return fmt.Errorf("read next tag: %w", err)

@@ -26,6 +26,8 @@ var examples = []example{
 	{[]byte("1 SEX F \r"), 1, `SEX`, `F `, ""},
 	{[]byte("0 HEAD\r"), 0, `HEAD`, ``, ""},
 	{[]byte("0 @OTHER@ SUBM\n"), 0, `SUBM`, ``, "OTHER"},
+	{[]byte("1 PUBL Corp, Inc.\n"), 1, `PUBL`, `Corp, Inc.`, ""},
+	{[]byte("1 NOTE <i>markup</i>. plain\n"), 1, `NOTE`, `<i>markup</i>. plain`, ""},
 }
 
 func TestNextTagFound(t *testing.T) {
@@ -33,7 +35,6 @@ func TestNextTagFound(t *testing.T) {
 	for _, ex := range examples {
 		s.reset()
 		offset, err := s.nextTag(ex.input)
-
 		if err != nil {
 			t.Fatalf(`nextTag for "%s" returned error "%v", expected no error`, ex.input, err)
 		}
@@ -59,7 +60,6 @@ func TestNextTagFound(t *testing.T) {
 		}
 
 	}
-
 }
 
 var examplesNot = [][]byte{
@@ -78,5 +78,4 @@ func TestNextTagNotFound(t *testing.T) {
 		}
 
 	}
-
 }
