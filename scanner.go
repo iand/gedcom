@@ -195,7 +195,7 @@ func (s *scanner) next() bool {
 					next, _, err := s.r.ReadRune()
 					s.r.UnreadRune()
 					if err == nil {
-						if !isAlphaNumeric(next) {
+						if !isNumeric(next) {
 							// Looks like it might be a malformed note, so continue parsing
 							s.buf = append(s.buf, '\n')
 							continue
@@ -221,4 +221,8 @@ func isSpace(c rune) bool {
 
 func isAlphaNumeric(c rune) bool {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+func isNumeric(c rune) bool {
+	return (c >= '0' && c <= '9')
 }

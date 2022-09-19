@@ -861,6 +861,45 @@ func TestFixupAncestryBadNote(t *testing.T) {
 	}
 }
 
+func TestFixupAncestryBadNote2(t *testing.T) {
+	f, err := os.Open("testdata/badnote2.ged")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	d := NewDecoder(f)
+
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(g.Source) == 0 {
+		t.Fatalf("no source was decoded")
+	}
+
+	want := &SourceRecord{
+		Xref:             "S1701628864",
+		Title:            "1939 England and Wales Register",
+		Originator:       "Ancestry.com",
+		PublicationFacts: "Ancestry.com Operations, Inc.",
+		Note: []*NoteRecord{
+			{
+				Note: "Crown copyright images reproduced by courtesy of TNA, London England. 1939 Register (Series RG101), The National Archives, Kew, London, England.\n" +
+					"\n" +
+					"The National Archives give no warranty as to the accuracy, completeness or fitness for the purpose of the information provided. Images may be used only for purposes of research, private study or education. Applications for any other use should be made to The National Archives Image Library, Kew, Richmond, Surrey TW9 4DU, Tel: 020 8392 5225. Fax: 020 8392 5266.",
+			},
+		},
+		UserDefined: []UserDefinedTag{
+			{Tag: "_APID", Value: "1,61596::0", Level: 1},
+		},
+	}
+
+	if diff := cmp.Diff(want, g.Source[0]); diff != "" {
+		t.Errorf("source mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestStructuredUserDefinedTags(t *testing.T) {
 	treeData := []byte(`
 0 HEAD
