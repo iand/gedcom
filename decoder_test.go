@@ -824,7 +824,7 @@ func TestIndividualAlia(t *testing.T) {
 	}
 }
 
-func TestFixupAncestryBadNode(t *testing.T) {
+func TestFixupAncestryBadNote(t *testing.T) {
 	f, err := os.Open("testdata/badnote.ged")
 	if err != nil {
 		t.Fatalf("open: %v", err)
@@ -857,6 +857,56 @@ func TestFixupAncestryBadNode(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(want, g.Source[0]); diff != "" {
+		t.Errorf("source mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestStructuredUserDefinedTags(t *testing.T) {
+	treeData := []byte(`
+0 HEAD
+1 SOUR The Source Product
+2 NAME The Product Name
+2 VERS The Product Version
+2 _TREE The Tree Name
+3 RIN The Tree Identifier
+3 _ENV The Tree Environment
+`)
+
+	d := NewDecoder(bytes.NewReader(treeData))
+
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := &Header{
+		SourceSystem: SystemRecord{
+			Xref:        "The Source Product",
+			Version:     "The Product Version",
+			ProductName: "The Product Name",
+			UserDefined: []UserDefinedTag{
+				{
+					Tag:   "_TREE",
+					Value: "The Tree Name",
+					Level: 2,
+					UserDefined: []UserDefinedTag{
+						{
+							Tag:   "RIN",
+							Value: "The Tree Identifier",
+							Level: 3,
+						},
+						{
+							Tag:   "_ENV",
+							Value: "The Tree Environment",
+							Level: 3,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(want, g.Header); diff != "" {
 		t.Errorf("source mismatch (-want +got):\n%s", diff)
 	}
 }

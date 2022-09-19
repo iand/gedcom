@@ -196,6 +196,7 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 					Xref:  xref,
 					Level: level,
 				})
+				d.pushParser(makeUserDefinedTagParser(d, &g.UserDefined[len(g.UserDefined)-1], level))
 			}
 		}
 		return nil
@@ -277,6 +278,7 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &i.UserDefined[len(i.UserDefined)-1], level))
 		}
 		return nil
 	}
@@ -356,6 +358,7 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &s.UserDefined[len(s.UserDefined)-1], level))
 		}
 
 		return nil
@@ -451,6 +454,7 @@ func makeCitationParser(d *Decoder, c *CitationRecord, minLevel int) parser {
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &c.UserDefined[len(c.UserDefined)-1], level))
 
 		}
 
@@ -573,6 +577,7 @@ func makeEventParser(d *Decoder, parentTag string, e *EventRecord, minLevel int)
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &e.UserDefined[len(e.UserDefined)-1], level))
 		}
 
 		return nil
@@ -679,6 +684,7 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &f.UserDefined[len(f.UserDefined)-1], level))
 		}
 		return nil
 	}
@@ -743,6 +749,7 @@ func makeMediaParser(d *Decoder, m *MediaRecord, minLevel int) parser {
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &m.UserDefined[len(m.UserDefined)-1], level))
 		}
 
 		return nil
@@ -880,6 +887,7 @@ func makeHeaderParser(d *Decoder, h *Header, minLevel int) parser {
 				Xref:  xref,
 				Level: level,
 			})
+			d.pushParser(makeUserDefinedTagParser(d, &h.UserDefined[len(h.UserDefined)-1], level))
 		}
 		return nil
 	}
@@ -942,6 +950,14 @@ func makeSystemParser(d *Decoder, s *SystemRecord, minLevel int) parser {
 		case "DATA":
 			s.SourceName = value
 			d.pushParser(makeDataSourceParser(d, s, level))
+		default:
+			s.UserDefined = append(s.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+			d.pushParser(makeUserDefinedTagParser(d, &s.UserDefined[len(s.UserDefined)-1], level))
 		}
 		return nil
 	}
@@ -1041,6 +1057,22 @@ func makeAssociationParser(d *Decoder, a *AssociationRecord, minLevel int) parse
 			d.pushParser(makeNoteParser(d, r, level))
 		}
 
+		return nil
+	}
+}
+
+func makeUserDefinedTagParser(d *Decoder, u *UserDefinedTag, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		u.UserDefined = append(u.UserDefined, UserDefinedTag{
+			Tag:   tag,
+			Value: value,
+			Xref:  xref,
+			Level: level,
+		})
+		d.pushParser(makeUserDefinedTagParser(d, &u.UserDefined[len(u.UserDefined)-1], level))
 		return nil
 	}
 }

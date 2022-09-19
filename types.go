@@ -47,14 +47,14 @@ type SystemRecord struct {
 	SourceName      string
 	SourceDate      string
 	SourceCopyright string
+	UserDefined     []UserDefinedTag
 }
 
 type SubmissionRecord struct {
 	Xref string
 }
 
-type Trailer struct {
-}
+type Trailer struct{}
 
 type FamilyRecord struct {
 	Xref              string
@@ -249,10 +249,11 @@ type AddressRecord struct {
 // A UserDefinedTag is a tag that is not defined in the GEDCOM specification but is included by the publisher of the
 // data. In GEDCOM user defined tags must be prefixed with an underscore. This is preserved in the Tag field.
 type UserDefinedTag struct {
-	Tag   string
-	Value string
-	Xref  string
-	Level int
+	Tag         string
+	Value       string
+	Xref        string
+	Level       int
+	UserDefined []UserDefinedTag
 }
 
 type AssociationRecord struct {
