@@ -35,7 +35,7 @@ This example shows how to parse a GEDCOM file and list all the individuals. In t
 
 The structures produced by the Decoder are in [types.go](types.go) and correspond roughly 1:1 to the structures in the [GEDCOM specification](http://homepages.rootsweb.ancestry.com/~pmcbride/gedcom/55gctoc.htm).
 
-This package does not implement the entire GEDCOM specification, I'm still working on it. It's about 80% complete which is enough for about 99% of GEDCOM files. It has not been extensively tested with non-ASCII character sets nor with pathological cases such as the [http://www.geditcom.com/gedcom.html](GEDCOM 5.5 Torture Test Files).
+This package does not implement the entire GEDCOM specification, I'm still working on it. It's about 80% complete which is enough for about 99% of GEDCOM files. It has not been extensively tested with non-ASCII character sets nor with pathological cases such as the [GEDCOM 5.5 Torture Test Files](http://www.geditcom.com/gedcom.html).
 
 ## Installation
 
