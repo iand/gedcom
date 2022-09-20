@@ -4,6 +4,8 @@ Go package to parse GEDCOM files.
 
 [![Check Status](https://github.com/iand/gedcom/actions/workflows/check.yml/badge.svg?branch=master)](https://github.com/iand/gedcom/actions/workflows/check.yml)
 [![Test Status](https://github.com/iand/gedcom/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/iand/gedcom/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/iand/gedcom)](https://goreportcard.com/report/github.com/iand/gedcom)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/iand/gedcom)
 
 ## Usage
 
