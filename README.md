@@ -2,8 +2,8 @@
 
 Go package to parse GEDCOM files.
 
-![Check Status](https://github.com/iand/gedcom/actions/workflows/check.yml/badge.svg?branch=master)
-![Test Status](https://github.com/iand/gedcom/actions/workflows/test.yml/badge.svg?branch=master)
+[![Check Status](https://github.com/iand/gedcom/actions/workflows/check.yml/badge.svg?branch=master)](https://github.com/iand/gedcom/actions/workflows/check.yml)
+[![Test Status](https://github.com/iand/gedcom/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/iand/gedcom/actions/workflows/test.yml)
 
 ## Usage
 
