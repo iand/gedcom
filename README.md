@@ -2,7 +2,8 @@
 
 Go package to parse GEDCOM files.
 
-[![Build Status](https://travis-ci.org/iand/gedcom.svg?branch=master)](https://travis-ci.org/iand/gedcom)
+![Check Status](https://github.com/iand/gedcom/actions/workflows/check.yml/badge.svg?branch=master)
+![Test Status](https://github.com/iand/gedcom/actions/workflows/test.yml/badge.svg?branch=master)
 
 ## Usage
 
