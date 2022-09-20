@@ -7,7 +7,6 @@ package gedcom
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -18,7 +17,7 @@ var data []byte
 
 func init() {
 	var err error
-	data, err = ioutil.ReadFile("testdata/allged.ged")
+	data, err = os.ReadFile("testdata/allged.ged")
 	if err != nil {
 		panic(err)
 	}
