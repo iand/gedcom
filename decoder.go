@@ -27,8 +27,8 @@ func NewDecoder(r io.Reader) *Decoder {
 	}
 }
 
-// Decode reads the next GEDCOM-encoded value from its
-// input and stores it in the value pointed to by v.
+// Decode reads GEDCOM-encoded data from its
+// input and parses it into a Gedcom structure.
 func (d *Decoder) Decode() (*Gedcom, error) {
 	g := &Gedcom{
 		Family:     make([]*FamilyRecord, 0),
