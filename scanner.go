@@ -11,8 +11,24 @@ import (
 	"strconv"
 )
 
-// A scanner is a GEDCOM scanning state machine.
-type scanner struct {
+type Line struct {
+	Level      int
+	Tag        string
+	Value      string
+	Xref       string
+	LineNumber int // the line number of the input file
+	Offset     int // the character offset in the input file
+}
+
+func (l *Line) String() string {
+	if l.Xref != "" {
+		return fmt.Sprintf("%d @%s@ %s %s", l.Level, l.Xref, l.Tag, l.Value)
+	}
+	return fmt.Sprintf("%d %s %s", l.Level, l.Tag, l.Value)
+}
+
+// A Scanner is a GEDCOM scanning state machine.
+type Scanner struct {
 	r      io.RuneScanner
 	err    error
 	state  int
@@ -25,8 +41,9 @@ type scanner struct {
 	xref   string
 }
 
-func newScanner(r io.RuneScanner) *scanner {
-	return &scanner{
+// NewScanner creates a new Scanner ready for use.
+func NewScanner(r io.RuneScanner) *Scanner {
+	return &Scanner{
 		r:     r,
 		state: stateBegin,
 		buf:   make([]rune, 0, 4),
@@ -46,7 +63,10 @@ const (
 	stateError
 )
 
-func (s *scanner) next() bool {
+// Next advances the scanner to the next line. It returns false if there are no more lines
+// or if an error is encountered. The caller should check the Err method whenever this
+// method returns false.
+func (s *Scanner) Next() bool {
 	s.state = stateBegin
 	s.level = 0
 	s.buf = s.buf[:0]
@@ -61,12 +81,20 @@ func (s *scanner) next() bool {
 		if err != nil {
 			if err != io.EOF {
 				s.state = stateError
-				s.err = fmt.Errorf("read: %w", err)
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("read: %w", err),
+				}
 			}
 
 			if s.state != stateEnd && s.state != stateBegin {
 				s.state = stateError
-				s.err = io.ErrUnexpectedEOF
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        io.ErrUnexpectedEOF,
+				}
 			}
 
 			return false
@@ -83,7 +111,11 @@ func (s *scanner) next() bool {
 				continue
 			default:
 				s.state = stateError
-				s.err = fmt.Errorf("found non-whitespace %q (%#[1]x) before level", c)
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("found non-whitespace %q (%#[1]x) before level", c),
+				}
 				return false
 			}
 		case stateLevel:
@@ -94,7 +126,11 @@ func (s *scanner) next() bool {
 			case c == ' ':
 				parsedLevel, perr := strconv.ParseInt(string(s.buf), 10, 64)
 				if perr != nil {
-					s.err = fmt.Errorf("parse level: %w", perr)
+					s.err = &ScanErr{
+						LineNumber: s.line,
+						Offset:     s.offset,
+						Err:        fmt.Errorf("parse level: %w", perr),
+					}
 					return false
 				}
 				s.level = int(parsedLevel)
@@ -102,7 +138,11 @@ func (s *scanner) next() bool {
 				s.state = stateSeekTagOrXref
 			default:
 				s.state = stateError
-				s.err = fmt.Errorf("level contained non-numerics")
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("level contained non-numerics"),
+				}
 				return false
 			}
 
@@ -115,7 +155,11 @@ func (s *scanner) next() bool {
 				continue
 			default:
 				s.state = stateError
-				s.err = fmt.Errorf("tag contained non-alphanumeric (%#x)", c)
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("tag contained non-alphanumeric (%#x)", c),
+				}
 				return false
 			}
 		case stateSeekTagOrXref:
@@ -129,7 +173,11 @@ func (s *scanner) next() bool {
 				continue
 			default:
 				s.state = stateError
-				s.err = fmt.Errorf("tag or xref contained non-alphanumeric (%#x)", c)
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("tag or xref contained non-alphanumeric (%#x)", c),
+				}
 				return false
 			}
 
@@ -149,7 +197,11 @@ func (s *scanner) next() bool {
 				s.state = stateSeekValue
 			default:
 				s.state = stateError
-				s.err = fmt.Errorf("tag contained non-alphanumeric (%#x)", c)
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("tag contained non-alphanumeric (%#x)", c),
+				}
 				return false
 			}
 
@@ -166,7 +218,11 @@ func (s *scanner) next() bool {
 				s.state = stateSeekTag
 			default:
 				s.state = stateError
-				s.err = fmt.Errorf("xref contained non-alphanumeric (%#x)", c)
+				s.err = &ScanErr{
+					LineNumber: s.line,
+					Offset:     s.offset,
+					Err:        fmt.Errorf("xref contained non-alphanumeric (%#x)", c),
+				}
 				return false
 			}
 		case stateSeekValue:
@@ -213,6 +269,40 @@ func (s *scanner) next() bool {
 			}
 		}
 	}
+}
+
+// Line returns the most recent line tokenized by a call to Next.
+func (s *Scanner) Line() Line {
+	return Line{
+		Level:      s.level,
+		Tag:        s.tag,
+		Value:      s.value,
+		Xref:       s.xref,
+		LineNumber: s.line,
+		Offset:     s.offset,
+	}
+}
+
+// Err returns the first non-EOF error that was encountered by the Scanner.
+func (s *Scanner) Err() error {
+	if s.err == nil {
+		return nil
+	}
+	return s.err
+}
+
+type ScanErr struct {
+	Err        error
+	LineNumber int
+	Offset     int
+}
+
+func (e *ScanErr) Error() string {
+	return fmt.Sprintf("scan error (line:%d, position:%d): %v", e.LineNumber, e.Offset, e.Err)
+}
+
+func (e *ScanErr) Unwrap() error {
+	return e.Err
 }
 
 func isSpace(c rune) bool {

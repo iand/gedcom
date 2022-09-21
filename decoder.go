@@ -8,7 +8,6 @@ package gedcom
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"strings"
 )
@@ -22,8 +21,9 @@ type Decoder struct {
 
 // NewDecoder returns a new decoder that reads r.
 func NewDecoder(r io.Reader) *Decoder {
+	br := bufio.NewReader(r)
 	return &Decoder{
-		r: bufio.NewReader(r),
+		r: br,
 	}
 }
 
@@ -49,11 +49,11 @@ func (d *Decoder) Decode() (*Gedcom, error) {
 }
 
 func (d *Decoder) scan(g *Gedcom) error {
-	s := newScanner(d.r)
+	s := NewScanner(d.r)
 	for {
-		if !s.next() {
-			if s.err != nil {
-				return fmt.Errorf("scan error (line:%d, position:%d): %w", s.line, s.offset, s.err)
+		if !s.Next() {
+			if s.Err() != nil {
+				return s.Err()
 			}
 			break
 		}

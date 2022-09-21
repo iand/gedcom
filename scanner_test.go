@@ -34,10 +34,10 @@ var examples = []example{
 
 func TestNextTagFound(t *testing.T) {
 	for _, ex := range examples {
-		s := newScanner(bytes.NewReader(ex.input))
-		if !s.next() {
-			if s.err != nil {
-				t.Fatalf(`nextTag for "%s" returned error "%v", expected no error`, ex.input, s.err)
+		s := NewScanner(bytes.NewReader(ex.input))
+		if !s.Next() {
+			if s.Err() != nil {
+				t.Fatalf(`nextTag for "%s" returned error "%v", expected no error`, ex.input, s.Err())
 			}
 		}
 		if s.level != ex.level {
@@ -56,7 +56,7 @@ func TestNextTagFound(t *testing.T) {
 			t.Errorf(`nextTag for "%s" returned xref "%s", expected "%s"`, ex.input, s.xref, ex.xref)
 		}
 
-		if s.next() {
+		if s.Next() {
 			t.Errorf(`got another tag for %q, wanted no tag`, ex)
 		}
 
@@ -71,11 +71,11 @@ var examplesNot = [][]byte{
 
 func TestNextTagNotFound(t *testing.T) {
 	for _, ex := range examplesNot {
-		s := newScanner(bytes.NewReader(ex))
-		if s.next() {
+		s := NewScanner(bytes.NewReader(ex))
+		if s.Next() {
 			t.Fatalf(`got tag for %q, wanted no tag`, ex)
 		}
-		if !errors.Is(s.err, io.ErrUnexpectedEOF) {
+		if !errors.Is(s.Err(), io.ErrUnexpectedEOF) {
 			t.Errorf("got error %v, wanted %v", s.err, io.ErrUnexpectedEOF)
 		}
 
@@ -85,36 +85,36 @@ func TestNextTagNotFound(t *testing.T) {
 func TestWindowsLineEndings(t *testing.T) {
 	input := []byte("0 HEAD\r\n1 CHAR UTF-8\r\n1 GEDC\r\n")
 
-	s := newScanner(bytes.NewReader(input))
-	if !s.next() {
-		t.Fatalf("missing first tag, err=%v", s.err)
+	s := NewScanner(bytes.NewReader(input))
+	if !s.Next() {
+		t.Fatalf("missing first tag, err=%v", s.Err())
 	}
 
 	if s.level != 0 {
 		t.Errorf("first tag, got level %d, wanted %d", s.level, 0)
 	}
 
-	if !s.next() {
-		t.Fatalf("missing second tag, err=%v", s.err)
+	if !s.Next() {
+		t.Fatalf("missing second tag, err=%v", s.Err())
 	}
 
 	if s.level != 1 {
 		t.Errorf("second tag, got level %d, wanted %d", s.level, 1)
 	}
 
-	if !s.next() {
-		t.Fatalf("missing third tag, err=%v", s.err)
+	if !s.Next() {
+		t.Fatalf("missing third tag, err=%v", s.Err())
 	}
 
 	if s.level != 1 {
 		t.Errorf("third tag, got level %d, wanted %d", s.level, 1)
 	}
 
-	if s.next() {
+	if s.Next() {
 		t.Errorf("got an unexpected tag")
 	}
 
-	if s.err != nil {
-		t.Errorf("got an unexpected error: %v", s.err)
+	if s.Err() != nil {
+		t.Errorf("got an unexpected error: %v", s.Err())
 	}
 }
