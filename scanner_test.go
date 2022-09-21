@@ -82,39 +82,64 @@ func TestNextTagNotFound(t *testing.T) {
 	}
 }
 
-func TestWindowsLineEndings(t *testing.T) {
-	input := []byte("0 HEAD\r\n1 CHAR UTF-8\r\n1 GEDC\r\n")
-
-	s := NewScanner(bytes.NewReader(input))
-	if !s.Next() {
-		t.Fatalf("missing first tag, err=%v", s.Err())
+func TestLineEndings(t *testing.T) {
+	testCases := []struct {
+		platform string
+		input    []byte
+	}{
+		{
+			platform: "unix",
+			input:    []byte("0 HEAD\n1 CHAR UTF-8\n1 GEDC\n1 NOTE first line\n2 CONT second line\n"),
+		},
+		{
+			platform: "windows",
+			input:    []byte("0 HEAD\r\n1 CHAR UTF-8\r\n1 GEDC\r\n1 NOTE first line\r\n2 CONT second line\r\n"),
+		},
+		{
+			platform: "macclassic",
+			input:    []byte("0 HEAD\r1 CHAR UTF-8\r\n1 GEDC\r1 NOTE first line\r2 CONT second line\r"),
+		},
 	}
 
-	if s.level != 0 {
-		t.Errorf("first tag, got level %d, wanted %d", s.level, 0)
+	want := []Line{
+		{Level: 0, Tag: "HEAD"},
+		{Level: 1, Tag: "CHAR", Value: "UTF-8"},
+		{Level: 1, Tag: "GEDC"},
+		{Level: 1, Tag: "NOTE", Value: "first line"},
+		{Level: 2, Tag: "CONT", Value: "second line"},
 	}
 
-	if !s.Next() {
-		t.Fatalf("missing second tag, err=%v", s.Err())
-	}
+	for _, tc := range testCases {
+		t.Run(tc.platform, func(t *testing.T) {
+			s := NewScanner(bytes.NewReader(tc.input))
 
-	if s.level != 1 {
-		t.Errorf("second tag, got level %d, wanted %d", s.level, 1)
-	}
+			for i := range want {
+				if !s.Next() {
+					t.Fatalf("missing line %d, err=%v", i+1, s.Err())
+				}
 
-	if !s.Next() {
-		t.Fatalf("missing third tag, err=%v", s.Err())
-	}
+				l := s.Line()
+				if l.Level != want[i].Level {
+					t.Errorf("line %d got level %d, wanted %d", i+1, l.Level, want[i].Level)
+				}
 
-	if s.level != 1 {
-		t.Errorf("third tag, got level %d, wanted %d", s.level, 1)
-	}
+				if l.Tag != want[i].Tag {
+					t.Errorf("line %d got tag %s, wanted %s", i+1, l.Tag, want[i].Tag)
+				}
 
-	if s.Next() {
-		t.Errorf("got an unexpected tag")
-	}
+				if l.Value != want[i].Value {
+					t.Errorf("line %d got value %q wanted %q", i+1, l.Value, want[i].Value)
+				}
 
-	if s.Err() != nil {
-		t.Errorf("got an unexpected error: %v", s.Err())
+			}
+
+			if s.Err() != nil {
+				t.Errorf("got an unexpected error: %v", s.Err())
+			}
+
+			if s.Next() {
+				t.Errorf("got an unexpected tag")
+			}
+		})
 	}
 }

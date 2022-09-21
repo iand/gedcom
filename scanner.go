@@ -187,6 +187,7 @@ func (s *Scanner) Next() bool {
 				s.buf = append(s.buf, c)
 				continue
 			case c == '\n' || c == '\r':
+				s.swallowCr(c)
 				s.tag = string(s.buf)
 				s.buf = s.buf[:0]
 				s.state = stateEnd
@@ -228,6 +229,7 @@ func (s *Scanner) Next() bool {
 		case stateSeekValue:
 			switch {
 			case c == '\n' || c == '\r':
+				s.swallowCr(c)
 				s.state = stateEnd
 				return true
 			case c == ' ':
@@ -240,6 +242,8 @@ func (s *Scanner) Next() bool {
 		case stateValue:
 			switch {
 			case c == '\n' || c == '\r':
+				s.swallowCr(c)
+
 				// Check to see if there is a malformed NOTE that contains an embedded newline
 				// For example, Ancestry GEDCOM exports that include source "London, England, Church of England Births and Baptisms, 1813-1917"
 				// have the following NOTE tag split over two lines (yet the CONC tag is correctly formatted!)
@@ -267,6 +271,18 @@ func (s *Scanner) Next() bool {
 				s.buf = append(s.buf, c)
 				continue
 			}
+		}
+	}
+}
+
+// swallowCr skips a carriage return if it is followed by a newline
+func (s *Scanner) swallowCr(c rune) {
+	if c == '\r' {
+		next, _, _ := s.r.ReadRune()
+		if next == '\n' {
+			s.offset++
+		} else {
+			s.r.UnreadRune()
 		}
 	}
 }
