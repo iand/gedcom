@@ -12,102 +12,124 @@ func TestSplitPersonalName(t *testing.T) {
 		{
 			name: "First Name Only",
 			want: ParsedName{
-				Full:  "First Name Only",
-				Given: "First Name Only",
+				Full:     "First Name Only",
+				Given:    "First Name Only",
+				Nickname: "",
 			},
 		},
 		{
 			name: "First Name /Last Name/",
 			want: ParsedName{
-				Full:    "First Name Last Name",
-				Given:   "First Name",
-				Surname: "Last Name",
+				Full:     "First Name Last Name",
+				Given:    "First Name",
+				Surname:  "Last Name",
+				Nickname: "",
 			},
 		},
 		{
 			name: "First/ Last / ",
 			want: ParsedName{
-				Full:    "First/ Last",
-				Given:   "First/ Last",
-				Surname: "",
+				Full:     "First/ Last",
+				Given:    "First/ Last",
+				Surname:  "",
+				Nickname: "",
 			},
 		},
 		{
 			name: " First /Last ",
 			want: ParsedName{
-				Full:    "First Last",
-				Given:   "First",
-				Surname: "Last",
+				Full:     "First Last",
+				Given:    "First",
+				Surname:  "Last",
+				Nickname: "",
 			},
 		},
 		{
 			name: "First /Last/ II ",
 			want: ParsedName{
-				Full:    "First Last II",
-				Given:   "First",
-				Surname: "Last",
-				Suffix:  "II",
+				Full:     "First Last II",
+				Given:    "First",
+				Surname:  "Last",
+				Suffix:   "II",
+				Nickname: "",
 			},
 		},
 		{
 			name: "/Last/ Karl II",
 			want: ParsedName{
-				Full:    "Last Karl II",
-				Surname: "Last",
-				Suffix:  "Karl II",
+				Full:     "Last Karl II",
+				Surname:  "Last",
+				Suffix:   "Karl II",
+				Nickname: "",
 			},
 		},
 		{
 			name: "Жанна /Иванова (Д'Арк)/",
 			want: ParsedName{
-				Full:    "Жанна Иванова (Д'Арк)",
-				Given:   "Жанна",
-				Surname: "Иванова (Д'Арк)",
+				Full:     "Жанна Иванова (Д'Арк)",
+				Given:    "Жанна",
+				Surname:  "Иванова (Д'Арк)",
+				Nickname: "",
 			},
 		},
 		{
 			name: "First/Alt /Last/ II ",
 			want: ParsedName{
-				Full:    "First/Alt Last II",
-				Given:   "First/Alt",
-				Surname: "Last",
-				Suffix:  "II",
+				Full:     "First/Alt Last II",
+				Given:    "First/Alt",
+				Surname:  "Last",
+				Suffix:   "II",
+				Nickname: "",
 			},
 		},
 		{
 			name: "/Last/",
 			want: ParsedName{
-				Full:    "Last",
-				Given:   "",
-				Surname: "Last",
-				Suffix:  "",
+				Full:     "Last",
+				Given:    "",
+				Surname:  "Last",
+				Suffix:   "",
+				Nickname: "",
 			},
 		},
 		{
 			name: " /Last/",
 			want: ParsedName{
-				Full:    "Last",
-				Given:   "",
-				Surname: "Last",
-				Suffix:  "",
+				Full:     "Last",
+				Given:    "",
+				Surname:  "Last",
+				Suffix:   "",
+				Nickname: "",
 			},
 		},
 		{
 			name: "/Last/ Jr",
 			want: ParsedName{
-				Full:    "Last Jr",
-				Given:   "",
-				Surname: "Last",
-				Suffix:  "Jr",
+				Full:     "Last Jr",
+				Given:    "",
+				Surname:  "Last",
+				Suffix:   "Jr",
+				Nickname: "",
 			},
 		},
 		{
 			name: `Lydia /Fetters/Fletcher/`,
 			want: ParsedName{
-				Full:    "Lydia Fetters/Fletcher",
-				Given:   "Lydia",
-				Surname: "Fetters/Fletcher",
-				Suffix:  "",
+				Full:     "Lydia Fetters/Fletcher",
+				Given:    "Lydia",
+				Surname:  "Fetters/Fletcher",
+				Suffix:   "",
+				Nickname: "",
+			},
+		},
+		{
+			name: `John "Jack" /Bryan/`,
+			want: ParsedName{
+				Full:     "John Bryan",
+				Given:    "John",
+				Surname:  "Bryan",
+				Suffix:   "",
+				Nickname: "Jack",
 			},
 		},
 	}
@@ -128,6 +150,9 @@ func TestSplitPersonalName(t *testing.T) {
 				}
 				if actual.Suffix != tc.want.Suffix {
 					t.Errorf("got Suffix=%q, wanted %q", actual.Suffix, tc.want.Suffix)
+				}
+				if actual.Nickname != tc.want.Nickname {
+					t.Errorf("got Nickname=%q, wanted %q", actual.Nickname, tc.want.Nickname)
 				}
 			}
 		})

@@ -5,10 +5,11 @@ import (
 )
 
 type ParsedName struct {
-	Full    string
-	Given   string
-	Surname string
-	Suffix  string
+	Full     string
+	Given    string
+	Surname  string
+	Suffix   string
+	Nickname string
 }
 
 // SplitPersonalName parses a name in the format "First Name /Surname/ suffix" into its components.
@@ -36,6 +37,15 @@ func SplitPersonalName(name string) ParsedName {
 			Given:   strings.TrimSpace(strings.Join(parts[:i], "/")),
 			Surname: parts[i],
 			Suffix:  strings.TrimSpace(strings.Join(parts[i+1:], "/")),
+		}
+
+		// Check for a nickname, which is usually in quotes after the given name
+		if strings.HasSuffix(pn.Given, `"`) {
+			pos := strings.Index(pn.Given, `"`)
+			if pos != -1 && pos < len(pn.Given)-2 {
+				pn.Nickname = strings.TrimSpace(pn.Given[pos+1 : len(pn.Given)-1])
+				pn.Given = strings.TrimSpace(pn.Given[:pos])
+			}
 		}
 
 		// See if there is a following part that could be part of the surname.
