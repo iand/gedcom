@@ -101,12 +101,22 @@ func TestSplitPersonalName(t *testing.T) {
 				Suffix:  "Jr",
 			},
 		},
+		{
+			name: `Lydia /Fetters/Fletcher/`,
+			want: ParsedName{
+				Full:    "Lydia Fetters/Fletcher",
+				Given:   "Lydia",
+				Surname: "Fetters/Fletcher",
+				Suffix:  "",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := SplitPersonalName(tc.name)
 			if actual != tc.want {
+				t.Logf("original input: %q", tc.name)
 				if actual.Full != tc.want.Full {
 					t.Errorf("got Full=%q, wanted %q", actual.Full, tc.want.Full)
 				}

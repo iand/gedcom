@@ -38,6 +38,19 @@ func SplitPersonalName(name string) ParsedName {
 			Suffix:  strings.TrimSpace(strings.Join(parts[i+1:], "/")),
 		}
 
+		// See if there is a following part that could be part of the surname.
+		// Some surnames may have alternatives: smith/smyth
+		for j := i + 1; j < len(parts); j++ {
+			p := parts[j]
+			if len(p) == 0 || p[0] == ' ' || p[len(p)-1] == ' ' {
+				// This part can't be part of the surname
+				break
+			}
+			// Append this part to the surname and recalculate the suffix
+			pn.Surname += "/" + p
+			pn.Suffix = strings.TrimSpace(strings.Join(parts[j+1:], "/"))
+		}
+
 		pn.Full = pn.Given
 		if len(pn.Surname) > 0 {
 			if len(pn.Full) > 0 {
