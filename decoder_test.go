@@ -735,13 +735,17 @@ func TestHeader(t *testing.T) {
 			ProductName:  "Name of source-program",
 			BusinessName: "Corporation name",
 			Address: AddressRecord{
-				Full:       "Corporation address line 1\nCorporation address line 2\nCorporation address line 3\nCorporation address line 4",
-				Line1:      "Corporation address line 1",
-				Line2:      "Corporation address line 2",
-				City:       "Corporation address city",
-				State:      "Corporation address state",
-				PostalCode: "Corporation address ZIP code",
-				Country:    "Corporation address country",
+				Address: []*AddressDetail{
+					{
+						Full:       "Corporation address line 1\nCorporation address line 2\nCorporation address line 3\nCorporation address line 4",
+						Line1:      "Corporation address line 1",
+						Line2:      "Corporation address line 2",
+						City:       "Corporation address city",
+						State:      "Corporation address state",
+						PostalCode: "Corporation address ZIP code",
+						Country:    "Corporation address country",
+					},
+				},
 				Phone: []string{
 					"Corporation phone number 1",
 					"Corporation phone number 2",
@@ -946,5 +950,240 @@ func TestStructuredUserDefinedTags(t *testing.T) {
 
 	if diff := cmp.Diff(want, g.Header); diff != "" {
 		t.Errorf("source mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestAddress(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  *Header
+	}{
+		{
+			name: "full-5.5",
+			input: `
+				0 HEAD
+				1 SOUR TestSource
+				2 CORP TestCorp
+				3 ADDR Address line 1
+				4 CONT Address line 2
+				4 CONT City, State PostalCode
+				4 CONT Country
+				4 _NAME GivenName FullName
+				4 ADR1 Address line 1
+				4 ADR2 Address line 2
+				4 CITY City
+				4 STAE State
+				4 POST PostalCode
+				4 CTRY Country
+				3 PHON Phone
+			`,
+			want: &Header{
+				SourceSystem: SystemRecord{
+					Xref:         "TestSource",
+					BusinessName: "TestCorp",
+					Address: AddressRecord{
+						Address: []*AddressDetail{
+							{
+								Full:       "Address line 1\nAddress line 2\nCity, State PostalCode\nCountry",
+								Line1:      "Address line 1",
+								Line2:      "Address line 2",
+								City:       "City",
+								State:      "State",
+								PostalCode: "PostalCode",
+								Country:    "Country",
+							},
+						},
+						Phone: []string{"Phone"},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple-5.5",
+			input: `
+				0 HEAD
+				1 SOUR TestSource
+				2 CORP TestCorp
+				3 ADDR Address 1 line 1
+				4 CONT Address 1 line 2
+				4 CONT City 1, State 1 PostalCode 1
+				4 CONT Country 1
+				4 _NAME Contact 1
+				4 ADR1 Address 1 line 1
+				4 ADR2 Address 1 line 2
+				4 CITY City 1
+				4 STAE State 1
+				4 POST PostalCode 1
+				4 CTRY Country 1
+				3 ADDR Address 2 line 1
+				4 CONT Address 2 line 2
+				4 CONT City 2, State 2 PostalCode 2
+				4 CONT Country 2
+				4 _NAME Contact 2
+				4 ADR1 Address 2 line 1
+				4 ADR2 Address 2 line 2
+				4 CITY City 2
+				4 STAE State 2
+				4 POST PostalCode 2
+				4 CTRY Country 2
+			`,
+			want: &Header{
+				SourceSystem: SystemRecord{
+					Xref:         "TestSource",
+					BusinessName: "TestCorp",
+					Address: AddressRecord{
+						Address: []*AddressDetail{
+							{
+								Full:       "Address 1 line 1\nAddress 1 line 2\nCity 1, State 1 PostalCode 1\nCountry 1",
+								Line1:      "Address 1 line 1",
+								Line2:      "Address 1 line 2",
+								City:       "City 1",
+								State:      "State 1",
+								PostalCode: "PostalCode 1",
+								Country:    "Country 1",
+							},
+							{
+								Full:       "Address 2 line 1\nAddress 2 line 2\nCity 2, State 2 PostalCode 2\nCountry 2",
+								Line1:      "Address 2 line 1",
+								Line2:      "Address 2 line 2",
+								City:       "City 2",
+								State:      "State 2",
+								PostalCode: "PostalCode 2",
+								Country:    "Country 2",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "phoneonly-5.5",
+			input: `
+				0 HEAD
+				1 SOUR TestSource
+				2 CORP TestCorp
+				3 PHON Phone
+			`,
+			want: &Header{
+				SourceSystem: SystemRecord{
+					Xref:         "TestSource",
+					BusinessName: "TestCorp",
+					Address: AddressRecord{
+						Phone: []string{"Phone"},
+					},
+				},
+			},
+		},
+		{
+			name: "full-5.5.1",
+			input: `
+				0 HEAD
+				1 SOUR TestSource
+				2 CORP TestCorp
+				3 ADDR Address line 1
+				4 CONT Address line 2
+				4 CONT Address line 3
+				4 CONT City, State ZIPcode
+				4 CONT Country
+				4 _NAME GivenName FullName
+				4 ADR1 Address line 1
+				4 ADR2 Address line 2
+				4 ADR3 Address line 3
+				4 CITY City
+				4 STAE State
+				4 POST PostalCode
+				4 CTRY Country
+				3 PHON Phone
+				3 EMAIL email@example.com
+				3 WWW www.example.com
+				3 FAX Fax
+			`,
+			want: &Header{
+				SourceSystem: SystemRecord{
+					Xref:         "TestSource",
+					BusinessName: "TestCorp",
+					Address: AddressRecord{
+						Address: []*AddressDetail{
+							{
+								Full:       "Address line 1\nAddress line 2\nAddress line 3\nCity, State ZIPcode\nCountry",
+								Line1:      "Address line 1",
+								Line2:      "Address line 2",
+								Line3:      "Address line 3",
+								City:       "City",
+								State:      "State",
+								PostalCode: "PostalCode",
+								Country:    "Country",
+							},
+						},
+						Phone: []string{"Phone"},
+						Email: []string{"email@example.com"},
+						WWW:   []string{"www.example.com"},
+						Fax:   []string{"Fax"},
+					},
+				},
+			},
+		},
+		{
+			// URL is sometimes used as an alias of WWW
+			name: "conc-5.5.1",
+			input: `
+				0 HEAD
+				1 SOUR TestSource
+				2 CORP TestCorp
+				3 URL www.example.com
+			`,
+			want: &Header{
+				SourceSystem: SystemRecord{
+					Xref:         "TestSource",
+					BusinessName: "TestCorp",
+					Address: AddressRecord{
+						WWW: []string{"www.example.com"},
+					},
+				},
+			},
+		},
+		{
+			name: "url-5.5.1",
+			input: `
+				0 HEAD
+				1 SOUR TestSource
+				2 CORP TestCorp
+				3 ADDR Addre
+				4 CONC ss line 1
+				4 CONT Address line 2
+				4 CONT Address line 3
+				4 CONT City, State ZIPcode
+				4 CONT Country
+			`,
+			want: &Header{
+				SourceSystem: SystemRecord{
+					Xref:         "TestSource",
+					BusinessName: "TestCorp",
+					Address: AddressRecord{
+						Address: []*AddressDetail{
+							{
+								Full: "Address line 1\nAddress line 2\nAddress line 3\nCity, State ZIPcode\nCountry",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Header); diff != "" {
+				t.Errorf("source mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }

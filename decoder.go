@@ -546,9 +546,6 @@ func makeEventParser(d *Decoder, parentTag string, e *EventRecord, minLevel int)
 		case "PLAC":
 			e.Place.Name = value
 			d.pushParser(makePlaceParser(d, &e.Place, level))
-		case "ADDR":
-			e.Address.Full = value
-			d.pushParser(makeAddressParser(d, &e.Address, level))
 		case "AGNC":
 			e.ResponsibleAgency = value
 		case "RELI":
@@ -570,6 +567,10 @@ func makeEventParser(d *Decoder, parentTag string, e *EventRecord, minLevel int)
 			e.Media = append(e.Media, m)
 			d.pushParser(makeMediaParser(d, m, level))
 		default:
+
+			if tryAddressTags(d, &e.Address, level, tag, value, xref) {
+				return nil
+			}
 
 			e.UserDefined = append(e.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -640,6 +641,7 @@ func makeFamilyLinkParser(d *Decoder, f *FamilyLinkRecord, minLevel int) parser 
 }
 
 func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
+	// see https://www.tamurajones.net/MarriageInGEDCOM.xhtml
 	return func(level int, tag string, value string, xref string) error {
 		if level <= minLevel {
 			return d.popParser(level, tag, value, xref)
@@ -651,7 +653,7 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 			f.Wife = d.individual(stripXref(value))
 		case "CHIL":
 			f.Child = append(f.Child, d.individual(stripXref(value)))
-		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN":
+		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN", "RESI":
 			e := &EventRecord{Tag: tag, Value: value}
 			f.Event = append(f.Event, e)
 			d.pushParser(makeEventParser(d, tag, e, level))
@@ -798,42 +800,44 @@ func makeUserReferenceParser(d *Decoder, r *UserReferenceRecord, minLevel int) p
 	}
 }
 
-func makeAddressParser(d *Decoder, a *AddressRecord, minLevel int) parser {
-	return func(level int, tag string, value string, xref string) error {
-		if level <= minLevel {
-			return d.popParser(level, tag, value, xref)
-		}
-		switch tag {
-		case "ADDR":
-			a.Full = value
-			d.pushParser(makeAddressDetailParser(d, a, level))
-		case "PHON":
-			a.Phone = append(a.Phone, value)
-		case "EMAIL":
-			a.Email = append(a.Email, value)
-		case "FAX":
-			a.Fax = append(a.Fax, value)
-		case "WWW":
-			a.WWW = append(a.WWW, value)
-
-		}
-
-		return nil
+func tryAddressTags(d *Decoder, a *AddressRecord, level int, tag string, value string, xref string) bool {
+	switch tag {
+	case "ADDR":
+		det := &AddressDetail{Full: value}
+		a.Address = append(a.Address, det)
+		d.pushParser(makeAddressDetailParser(d, det, level))
+	case "PHON":
+		a.Phone = append(a.Phone, value)
+	case "EMAIL":
+		a.Email = append(a.Email, value)
+	case "FAX":
+		a.Fax = append(a.Fax, value)
+	case "WWW", "URL":
+		a.WWW = append(a.WWW, value)
+	default:
+		return false
 	}
+
+	return true // matched a tag
 }
 
-func makeAddressDetailParser(d *Decoder, a *AddressRecord, minLevel int) parser {
+func makeAddressDetailParser(d *Decoder, a *AddressDetail, minLevel int) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level <= minLevel {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
+		// CONT and CONC are allowed even though spec highlights CONT specifically
 		case "CONT":
 			a.Full = a.Full + "\n" + value
+		case "CONC":
+			a.Full = a.Full + value
 		case "ADR1":
 			a.Line1 = value
 		case "ADR2":
 			a.Line2 = value
+		case "ADR3":
+			a.Line3 = value
 		case "CITY":
 			a.City = value
 		case "STAE":
@@ -946,7 +950,7 @@ func makeSystemParser(d *Decoder, s *SystemRecord, minLevel int) parser {
 			s.ProductName = value
 		case "CORP":
 			s.BusinessName = value
-			d.pushParser(makeAddressParser(d, &s.Address, level))
+			d.pushParser(makeCorpParser(d, s, level))
 		case "DATA":
 			s.SourceName = value
 			d.pushParser(makeDataSourceParser(d, s, level))
@@ -959,6 +963,17 @@ func makeSystemParser(d *Decoder, s *SystemRecord, minLevel int) parser {
 			})
 			d.pushParser(makeUserDefinedTagParser(d, &s.UserDefined[len(s.UserDefined)-1], level))
 		}
+		return nil
+	}
+}
+
+func makeCorpParser(d *Decoder, s *SystemRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+
+		tryAddressTags(d, &s.Address, level, tag, value, xref)
 		return nil
 	}
 }
@@ -1019,9 +1034,6 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 		switch tag {
 		case "Name":
 			r.Name = value
-		case "ADDR":
-			r.Address.Full = value
-			d.pushParser(makeAddressParser(d, &r.Address, level))
 		case "NOTE":
 			n := &NoteRecord{Note: value}
 			r.Note = append(r.Note, n)
@@ -1034,7 +1046,10 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 			d.pushParser(makeUserReferenceParser(d, u, level))
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &r.Change, level))
+		default:
+			tryAddressTags(d, &r.Address, level, tag, value, xref)
 		}
+
 		return nil
 	}
 }

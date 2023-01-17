@@ -232,18 +232,24 @@ type FamilyLinkRecord struct {
 	Note   []*NoteRecord
 }
 
+// See https://www.tamurajones.net/GEDCOMADDR.xhtml for very informative analysis of the ADDR structure
 type AddressRecord struct {
-	Full       string
+	Address []*AddressDetail
+	Phone   []string
+	Email   []string // 5.5.1
+	Fax     []string // 5.5.1
+	WWW     []string // 5.5.1
+}
+
+type AddressDetail struct {
+	Full       string // The full address as found in free-form fields which may be optionally broken down using following structured fields
 	Line1      string
 	Line2      string
+	Line3      string // 5.5.1
 	City       string
 	State      string
 	PostalCode string
 	Country    string
-	Phone      []string
-	Email      []string // 5.5.1
-	Fax        []string // 5.5.1
-	WWW        []string // 5.5.1
 }
 
 // A UserDefinedTag is a tag that is not defined in the GEDCOM specification but is included by the publisher of the
