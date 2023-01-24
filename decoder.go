@@ -163,6 +163,20 @@ func (d *Decoder) repository(xref string) *RepositoryRecord {
 	return ref
 }
 
+func (d *Decoder) media(xref string) *MediaRecord {
+	if xref == "" {
+		return &MediaRecord{}
+	}
+
+	ref, found := d.refs[xref].(*MediaRecord)
+	if !found {
+		rec := &MediaRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	}
+	return ref
+}
+
 func makeRootParser(d *Decoder, g *Gedcom) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level == 0 {
@@ -189,6 +203,10 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				obj := d.repository(xref)
 				g.Repository = append(g.Repository, obj)
 				d.pushParser(makeRepositoryParser(d, obj, level))
+			case "OBJE":
+				obj := d.media(xref)
+				g.Media = append(g.Media, obj)
+				d.pushParser(makeMediaParser(d, obj, level))
 			default:
 				g.UserDefined = append(g.UserDefined, UserDefinedTag{
 					Tag:   tag,

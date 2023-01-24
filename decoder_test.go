@@ -1187,3 +1187,76 @@ func TestAddress(t *testing.T) {
 		})
 	}
 }
+
+func TestMediaObject(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  []*MediaRecord
+	}{
+		{
+			name: "url-5.5.1",
+			input: `
+				0 @O128@ OBJE
+				1 FILE
+				2 FORM jpg
+				3 TYPE photo
+				3 _MTYPE document
+				3 _STYPE png
+				3 _SIZE 194421
+				3 _WDTH 1102
+				3 _HGHT 686
+				2 TITL  Shields Daily News - Tuesday 19 June 1900
+				1 RIN 6d49c140-0447-47f5-8a50-1706a202c6cb
+				1 DATE 19 Jun 1900
+				1 _META <metadataxml><transcription>DEATHS
+				2 CONT PEAK.—At 21 Beacon Street, North Shields, on the 17th inst., aged 60 years, John Peak, relict of the late Dinah Peak. Interment on Wednesday at Preston Cemetery at 3 o’clock. Friends please accept this (the only) intimation.
+				2 CONT </transcription></metadataxml>
+				1 _CREA 2021-04-09 11:47:49.000
+				1 _ORIG u
+			`,
+			want: []*MediaRecord{
+				{
+					Xref: "O128",
+
+					File: []*FileRecord{
+						{
+							Format:     "jpg",
+							FormatType: "photo",
+							Title:      "Shields Daily News - Tuesday 19 June 1900",
+						},
+					},
+					AutomatedRecordId: "6d49c140-0447-47f5-8a50-1706a202c6cb",
+					UserDefined: []UserDefinedTag{
+						{Tag: "DATE", Value: "19 Jun 1900", Level: 1},
+						{
+							Tag:   "_META",
+							Value: "<metadataxml><transcription>DEATHS",
+							Level: 1,
+							UserDefined: []UserDefinedTag{
+								{Tag: "CONT", Value: "PEAK.—At 21 Beacon Street, North Shields, on the 17th inst., aged 60 years, John Peak, relict of the late Dinah Peak. Interment on Wednesday at Preston Cemetery at 3 o’clock. Friends please accept this (the only) intimation.", Level: 2},
+								{Tag: "CONT", Value: "</transcription></metadataxml>", Level: 2},
+							},
+						},
+						{Tag: "_CREA", Value: "2021-04-09 11:47:49.000", Level: 1},
+						{Tag: "_ORIG", Value: "u", Level: 1},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Media); diff != "" {
+				t.Errorf("source mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
