@@ -351,7 +351,7 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 		case "REPO":
 			repo := d.repository(stripXref(value))
 			s.Repository = &SourceRepositoryRecord{Repository: repo}
-			d.pushParser(makeSourceRepositoruParser(d, s.Repository, level))
+			d.pushParser(makeSourceRepositoryParser(d, s.Repository, level))
 
 		case "REFN":
 			r := &UserReferenceRecord{Number: value}
@@ -415,7 +415,7 @@ func makeSourceEventParser(d *Decoder, s *SourceEventRecord, minLevel int) parse
 	}
 }
 
-func makeSourceRepositoruParser(d *Decoder, s *SourceRepositoryRecord, minLevel int) parser {
+func makeSourceRepositoryParser(d *Decoder, s *SourceRepositoryRecord, minLevel int) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level <= minLevel {
 			return d.popParser(level, tag, value, xref)
