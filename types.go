@@ -105,10 +105,11 @@ type MediaRecord struct {
 }
 
 type FileRecord struct {
-	Name       string
-	Format     string
-	FormatType string
-	Title      string
+	Name        string
+	Format      string
+	FormatType  string
+	Title       string
+	UserDefined []UserDefinedTag
 }
 
 type UserReferenceRecord struct {

@@ -852,7 +852,13 @@ func makeMediaFileFormatParser(d *Decoder, f *FileRecord, minLevel int) parser {
 		case "TYPE":
 			f.FormatType = value
 		default:
-			d.unhandledTag(level, tag, value, xref)
+			f.UserDefined = append(f.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+			d.pushParser(makeUserDefinedTagParser(d, &f.UserDefined[len(f.UserDefined)-1], level))
 		}
 		return nil
 	}

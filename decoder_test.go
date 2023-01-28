@@ -1224,6 +1224,13 @@ func TestMediaObject(t *testing.T) {
 							Format:     "jpg",
 							FormatType: "photo",
 							Title:      "Shields Daily News - Tuesday 19 June 1900",
+							UserDefined: []UserDefinedTag{
+								{Tag: "_MTYPE", Value: "document", Level: 3},
+								{Tag: "_STYPE", Value: "png", Level: 3},
+								{Tag: "_SIZE", Value: "194421", Level: 3},
+								{Tag: "_WDTH", Value: "1102", Level: 3},
+								{Tag: "_HGHT", Value: "686", Level: 3},
+							},
 						},
 					},
 					AutomatedRecordId: "6d49c140-0447-47f5-8a50-1706a202c6cb",
