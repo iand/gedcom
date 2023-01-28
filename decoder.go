@@ -8,15 +8,19 @@ package gedcom
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"log"
 	"strings"
 )
 
 // A Decoder reads and decodes GEDCOM objects from an input stream.
 type Decoder struct {
-	r       *bufio.Reader
-	parsers []parser
-	refs    map[string]interface{}
+	r         *bufio.Reader
+	parsers   []parser
+	refs      map[string]interface{}
+	line      int
+	tagLogger *log.Logger
 }
 
 // NewDecoder returns a new decoder that reads r.
@@ -25,6 +29,10 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
 		r: br,
 	}
+}
+
+func (d *Decoder) LogUnhandledTags(w io.Writer) {
+	d.tagLogger = log.New(w, "", log.Lshortfile)
 }
 
 // Decode reads GEDCOM-encoded data from its
@@ -57,6 +65,7 @@ func (d *Decoder) scan(g *Gedcom) error {
 			}
 			break
 		}
+		d.line = s.line
 		d.parsers[len(d.parsers)-1](s.level, s.tag, s.value, s.xref)
 	}
 
@@ -175,6 +184,14 @@ func (d *Decoder) media(xref string) *MediaRecord {
 		return rec
 	}
 	return ref
+}
+
+func (d *Decoder) unhandledTag(level int, tag string, value string, xref string) {
+	if d.tagLogger == nil {
+		return
+	}
+
+	d.tagLogger.Output(2, fmt.Sprintf("unhandled tag on line %d; level=%d; tag=%s; value=%s; xref=%s", d.line, level, tag, value, xref))
 }
 
 func makeRootParser(d *Decoder, g *Gedcom) parser {
@@ -317,6 +334,8 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			r := &NoteRecord{Note: value}
 			n.Note = append(n.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -393,6 +412,8 @@ func makeSourceDataParser(d *Decoder, s *SourceDataRecord, minLevel int) parser 
 			se := &SourceEventRecord{Kind: value}
 			s.Event = append(s.Event, se)
 			d.pushParser(makeSourceEventParser(d, se, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -409,6 +430,8 @@ func makeSourceEventParser(d *Decoder, s *SourceEventRecord, minLevel int) parse
 			s.Date = value
 		case "PLAC":
 			s.Place = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -429,6 +452,8 @@ func makeSourceRepositoryParser(d *Decoder, s *SourceRepositoryRecord, minLevel 
 			r := &SourceCallNumberRecord{CallNumber: value}
 			s.CallNumber = append(s.CallNumber, r)
 			d.pushParser(makeSourceCallNumberParser(d, r, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -443,6 +468,8 @@ func makeSourceCallNumberParser(d *Decoder, s *SourceCallNumberRecord, minLevel 
 		switch tag {
 		case "MEDI":
 			s.MediaType = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -494,6 +521,8 @@ func makeNoteParser(d *Decoder, n *NoteRecord, minLevel int) parser {
 			c := &CitationRecord{Source: d.source(stripXref(value))}
 			n.Citation = append(n.Citation, c)
 			d.pushParser(makeCitationParser(d, c, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -510,6 +539,8 @@ func makeTextParser(d *Decoder, s *string, minLevel int) parser {
 			*s = *s + "\n" + value
 		case "CONC":
 			*s = *s + value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -527,6 +558,8 @@ func makeDataParser(d *Decoder, r *DataRecord, minLevel int) parser {
 		case "TEXT":
 			r.Text = append(r.Text, value)
 			d.pushParser(makeTextParser(d, &r.Text[len(r.Text)-1], level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -612,6 +645,8 @@ func makeEventAdoptParser(d *Decoder, e *EventRecord, minLevel int) parser {
 		switch tag {
 		case "ADOP":
 			e.AdoptedByParent = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -633,6 +668,8 @@ func makePlaceParser(d *Decoder, p *PlaceRecord, minLevel int) parser {
 			r := &NoteRecord{Note: value}
 			p.Note = append(p.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -651,7 +688,8 @@ func makeFamilyLinkParser(d *Decoder, f *FamilyLinkRecord, minLevel int) parser 
 			r := &NoteRecord{Note: value}
 			f.Note = append(f.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
-
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -787,6 +825,8 @@ func makeMediaFileParser(d *Decoder, f *FileRecord, minLevel int) parser {
 			d.pushParser(makeMediaFileFormatParser(d, f, level))
 		case "TITL":
 			f.Title = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -800,6 +840,8 @@ func makeMediaFileFormatParser(d *Decoder, f *FileRecord, minLevel int) parser {
 		switch tag {
 		case "TYPE":
 			f.FormatType = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -813,6 +855,8 @@ func makeUserReferenceParser(d *Decoder, r *UserReferenceRecord, minLevel int) p
 		switch tag {
 		case "TYPE":
 			r.Type = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -923,6 +967,8 @@ func makeHeaderTimeParser(d *Decoder, h *Header, minLevel int) parser {
 		switch tag {
 		case "TIME":
 			h.Time = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -938,6 +984,8 @@ func makeHeaderVersionParser(d *Decoder, h *Header, minLevel int) parser {
 			h.Version = value
 		case "FORM":
 			h.Form = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -951,6 +999,8 @@ func makeHeaderCharacterSetVersionParser(d *Decoder, h *Header, minLevel int) pa
 		switch tag {
 		case "VERS":
 			h.CharacterSetVersion = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -1007,6 +1057,8 @@ func makeDataSourceParser(d *Decoder, s *SystemRecord, minLevel int) parser {
 		case "COPR":
 			s.SourceCopyright = value
 			d.pushParser(makeTextParser(d, &s.SourceCopyright, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -1025,6 +1077,8 @@ func makeChangeParser(d *Decoder, c *ChangeRecord, minLevel int) parser {
 			r := &NoteRecord{Note: value}
 			c.Note = append(c.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
@@ -1039,6 +1093,8 @@ func makeChangeTimeParser(d *Decoder, c *ChangeRecord, minLevel int) parser {
 		switch tag {
 		case "Time":
 			c.Time = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 		return nil
 	}
@@ -1065,7 +1121,9 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &r.Change, level))
 		default:
-			tryAddressTags(d, &r.Address, level, tag, value, xref)
+			if !tryAddressTags(d, &r.Address, level, tag, value, xref) {
+				d.unhandledTag(level, tag, value, xref)
+			}
 		}
 
 		return nil
@@ -1088,6 +1146,8 @@ func makeAssociationParser(d *Decoder, a *AssociationRecord, minLevel int) parse
 			r := &NoteRecord{Note: value}
 			a.Note = append(a.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
 		}
 
 		return nil
