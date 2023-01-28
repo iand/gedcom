@@ -185,9 +185,15 @@ type SubmitterRecord struct {
 }
 
 type NameRecord struct {
-	Name     string
-	Citation []*CitationRecord
-	Note     []*NoteRecord
+	Name                   string
+	NamePiecePrefix        string
+	NamePieceGiven         string
+	NamePieceNick          string
+	NamePieceSurnamePrefix string
+	NamePieceSurname       string
+	NamePieceSuffix        string
+	Citation               []*CitationRecord
+	Note                   []*NoteRecord
 }
 
 type DataRecord struct {

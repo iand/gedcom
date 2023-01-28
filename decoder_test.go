@@ -1195,7 +1195,7 @@ func TestMediaObject(t *testing.T) {
 		want  []*MediaRecord
 	}{
 		{
-			name: "url-5.5.1",
+			name: "simple",
 			input: `
 				0 @O128@ OBJE
 				1 FILE
@@ -1255,6 +1255,61 @@ func TestMediaObject(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(tc.want, g.Media); diff != "" {
+				t.Errorf("source mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestName(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  []*NameRecord
+	}{
+		{
+			name: "pieces",
+			input: `
+				1 NAME Prefix Given "Nick" SurnamePrefix /Surname/ Suffix
+				2 GIVN Given
+				2 SURN Surname
+				2 NPFX Prefix
+				2 SPFX SurnamePrefix
+				2 NSFX Suffix
+				2 NICK Nick
+				2 SOUR @S503034026@
+				3 PAGE General Register Office
+				`,
+			want: []*NameRecord{
+				{
+					Name:                   `Prefix Given "Nick" SurnamePrefix /Surname/ Suffix`,
+					NamePiecePrefix:        "Prefix",
+					NamePieceGiven:         "Given",
+					NamePieceNick:          "Nick",
+					NamePieceSurnamePrefix: "SurnamePrefix",
+					NamePieceSurname:       "Surname",
+					NamePieceSuffix:        "Suffix",
+					Citation: []*CitationRecord{
+						{
+							Source: &SourceRecord{Xref: "S503034026"},
+							Page:   "General Register Office",
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input = "0 @test@ INDI\n" + tc.input
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Individual[0].Name); diff != "" {
 				t.Errorf("source mismatch (-want +got):\n%s", diff)
 			}
 		})

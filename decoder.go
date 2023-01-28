@@ -325,7 +325,18 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
-
+		case "NPFX":
+			n.NamePiecePrefix = value
+		case "GIVN":
+			n.NamePieceGiven = value
+		case "NICK":
+			n.NamePieceNick = value
+		case "SPFX":
+			n.NamePieceSurnamePrefix = value
+		case "SURN":
+			n.NamePieceSurname = value
+		case "NSFX":
+			n.NamePieceSuffix = value
 		case "SOUR":
 			c := &CitationRecord{Source: d.source(stripXref(value))}
 			n.Citation = append(n.Citation, c)
