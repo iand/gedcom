@@ -374,7 +374,7 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 			d.pushParser(makeTextParser(d, &s.Originator, level))
 		case "PUBL":
 			s.PublicationFacts = value
-			d.pushParser(makeTextParser(d, &s.PublicationFacts, level))
+			d.pushParser(makePublicationFactsParser(d, &s.PublicationFacts, level))
 		case "TEXT":
 			s.Text = value
 			d.pushParser(makeTextParser(d, &s.Text, level))
@@ -549,6 +549,34 @@ func makeTextParser(d *Decoder, s *string, minLevel int) parser {
 		case "CONT":
 			*s = *s + "\n" + value
 		case "CONC":
+			*s = *s + value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+
+		return nil
+	}
+}
+
+func makePublicationFactsParser(d *Decoder, s *string, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "CONT":
+			*s = *s + "\n" + value
+		case "CONC":
+			*s = *s + value
+		case "DATE": // ancestry
+			if *s != "" {
+				*s = *s + ", "
+			}
+			*s = *s + value
+		case "PLAC": // ancestry
+			if *s != "" {
+				*s = *s + ", "
+			}
 			*s = *s + value
 		default:
 			d.unhandledTag(level, tag, value, xref)

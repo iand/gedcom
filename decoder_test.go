@@ -8,6 +8,7 @@ package gedcom
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -650,73 +651,106 @@ func TestFamily(t *testing.T) {
 }
 
 func TestSource(t *testing.T) {
-	d := NewDecoder(bytes.NewReader(data))
-
-	g, err := d.Decode()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	sources := []*SourceRecord{
+	testCases := []struct {
+		name  string
+		input string
+		want  []*SourceRecord
+	}{
 		{
-			Xref: "SOURCE1",
-			Data: &SourceDataRecord{
-				Event: []*SourceEventRecord{
-					{
-						Kind:  "BIRT, CHR",
-						Date:  "FROM 1 JAN 1980 TO 1 FEB 1982",
-						Place: "Place",
-					},
+			name:  "allged",
+			input: string(data),
+			want: []*SourceRecord{
+				{
+					Xref: "SOURCE1",
+					Data: &SourceDataRecord{
+						Event: []*SourceEventRecord{
+							{
+								Kind:  "BIRT, CHR",
+								Date:  "FROM 1 JAN 1980 TO 1 FEB 1982",
+								Place: "Place",
+							},
 
-					{
-						Kind:  "DEAT",
-						Date:  "FROM 1 JAN 1980 TO 1 FEB 1982",
-						Place: "Another place",
+							{
+								Kind:  "DEAT",
+								Date:  "FROM 1 JAN 1980 TO 1 FEB 1982",
+								Place: "Another place",
+							},
+						},
 					},
-				},
-			},
-			Title:            "Title of source\nTitle continued here. The word TEST should not be broken!",
-			Originator:       "Author of source\nAuthor continued here. The word TEST should not be broken!",
-			FiledBy:          "Short title",
-			PublicationFacts: "Source publication facts\nPublication facts continued here. The word TEST should not be broken!",
-			Text:             "Citation from source\nCitation continued here. The word TEST should not be broken!",
-			Change: ChangeRecord{
-				Date: "1 APR 1998",
-				Note: []*NoteRecord{
-					{
-						Note: "A note\nNote continued here. The word TEST should not be broken!",
-					},
-				},
-			},
-			Note: []*NoteRecord{
-				{
-					Note: "A note about the family\nNote continued here. The word TEST should not be broken!",
-				},
-			},
-			Media: []*MediaRecord{
-				{
-					File: []*FileRecord{
-						{
-							Name:   `\\network\drive\path\file name.bmp`,
-							Format: "bmp",
-							Title:  "A bmp picture",
+					Title:            "Title of source\nTitle continued here. The word TEST should not be broken!",
+					Originator:       "Author of source\nAuthor continued here. The word TEST should not be broken!",
+					FiledBy:          "Short title",
+					PublicationFacts: "Source publication facts\nPublication facts continued here. The word TEST should not be broken!",
+					Text:             "Citation from source\nCitation continued here. The word TEST should not be broken!",
+					Change: ChangeRecord{
+						Date: "1 APR 1998",
+						Note: []*NoteRecord{
+							{
+								Note: "A note\nNote continued here. The word TEST should not be broken!",
+							},
 						},
 					},
 					Note: []*NoteRecord{
 						{
-							Note: "A note\nNote continued here. The word TEST should not be broken!",
+							Note: "A note about the family\nNote continued here. The word TEST should not be broken!",
 						},
+					},
+					Media: []*MediaRecord{
+						{
+							File: []*FileRecord{
+								{
+									Name:   `\\network\drive\path\file name.bmp`,
+									Format: "bmp",
+									Title:  "A bmp picture",
+								},
+							},
+							Note: []*NoteRecord{
+								{
+									Note: "A note\nNote continued here. The word TEST should not be broken!",
+								},
+							},
+						},
+					},
+					UserDefined: []UserDefinedTag{
+						{Tag: "_MYOWNTAG", Value: "This is a non-standard tag. Not recommended but allowed", Level: 1},
 					},
 				},
 			},
-			UserDefined: []UserDefinedTag{
-				{Tag: "_MYOWNTAG", Value: "This is a non-standard tag. Not recommended but allowed", Level: 1},
+		},
+		{
+			name: "ancestry_date_place",
+			input: `
+				0 @SOURCE1@ SOUR
+				1 TITL 1939 England and Wales Register
+				1 AUTH Ancestry.com
+				1 PUBL Ancestry.com Operations, Inc.
+				2 DATE 2018
+				2 PLAC Lehi, UT, USA
+			`,
+			want: []*SourceRecord{
+				{
+					Xref:             "SOURCE1",
+					Title:            "1939 England and Wales Register",
+					Originator:       "Ancestry.com",
+					PublicationFacts: "Ancestry.com Operations, Inc., 2018, Lehi, UT, USA",
+				},
 			},
 		},
 	}
 
-	if diff := cmp.Diff(sources, g.Source); diff != "" {
-		t.Errorf("source mismatch (-want +got):\n%s", diff)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := NewDecoder(strings.NewReader(tc.input))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Source); diff != "" {
+				t.Errorf("source mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
