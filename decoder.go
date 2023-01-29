@@ -1142,7 +1142,7 @@ func makeChangeTimeParser(d *Decoder, c *ChangeRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
-		case "Time":
+		case "TIME":
 			c.Time = value
 		default:
 			d.unhandledTag(level, tag, value, xref)
