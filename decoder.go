@@ -1157,7 +1157,7 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
-		case "Name":
+		case "NAME":
 			r.Name = value
 		case "NOTE":
 			n := &NoteRecord{Note: value}
