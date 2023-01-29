@@ -1172,9 +1172,16 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &r.Change, level))
 		default:
-			if !tryAddressTags(d, &r.Address, level, tag, value, xref) {
-				d.unhandledTag(level, tag, value, xref)
+			if tryAddressTags(d, &r.Address, level, tag, value, xref) {
+				return nil
 			}
+			r.UserDefined = append(r.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+			d.pushParser(makeUserDefinedTagParser(d, &r.UserDefined[len(r.UserDefined)-1], level))
 		}
 
 		return nil

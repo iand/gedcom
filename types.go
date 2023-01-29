@@ -131,6 +131,7 @@ type RepositoryRecord struct {
 	UserReference     []*UserReferenceRecord
 	AutomatedRecordId string
 	Change            ChangeRecord
+	UserDefined       []UserDefinedTag
 }
 
 type SourceRecord struct {
