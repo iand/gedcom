@@ -198,8 +198,9 @@ type NameRecord struct {
 }
 
 type DataRecord struct {
-	Date string
-	Text []string
+	Date        string
+	Text        []string
+	UserDefined []UserDefinedTag
 }
 
 type EventRecord struct {

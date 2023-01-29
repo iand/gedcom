@@ -598,7 +598,13 @@ func makeDataParser(d *Decoder, r *DataRecord, minLevel int) parser {
 			r.Text = append(r.Text, value)
 			d.pushParser(makeTextParser(d, &r.Text[len(r.Text)-1], level))
 		default:
-			d.unhandledTag(level, tag, value, xref)
+			r.UserDefined = append(r.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+			d.pushParser(makeUserDefinedTagParser(d, &r.UserDefined[len(r.UserDefined)-1], level))
 		}
 
 		return nil
