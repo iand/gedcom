@@ -187,6 +187,7 @@ func TestIndividual(t *testing.T) {
 
 			Change: ChangeRecord{
 				Date: "1 APR 1998",
+				Time: "12:34:56.789",
 				Note: []*NoteRecord{
 					{
 						Note: "A note\nNote continued here. The word TEST should not be broken!",
@@ -590,6 +591,7 @@ func TestFamily(t *testing.T) {
 			},
 			Change: ChangeRecord{
 				Date: "1 APR 1998",
+				Time: "12:34:56.789",
 				Note: []*NoteRecord{
 					{
 						Note: "A note\nNote continued here. The word TEST should not be broken!",
@@ -684,6 +686,7 @@ func TestSource(t *testing.T) {
 					Text:             "Citation from source\nCitation continued here. The word TEST should not be broken!",
 					Change: ChangeRecord{
 						Date: "1 APR 1998",
+						Time: "12:34:56.789",
 						Note: []*NoteRecord{
 							{
 								Note: "A note\nNote continued here. The word TEST should not be broken!",
@@ -1334,6 +1337,61 @@ func TestName(t *testing.T) {
 						{
 							Source: &SourceRecord{Xref: "S503034026"},
 							Page:   "General Register Office",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "type",
+			input: `
+				1 NAME Mrs Dubose
+				2 TYPE Married
+				`,
+			want: []*NameRecord{
+				{
+					Name: `Mrs Dubose`,
+					Type: "Married",
+				},
+			},
+		},
+		{
+			name: "phonetic",
+			input: `
+				1 NAME Alejandra /Quintanillia/
+				2 PHON ah-leh-han-drah /keen-tah-nee-yah/
+				3 SURN keen-tah-nee-yah
+				3 GIVN ah-leh-han-drah
+				`,
+			want: []*NameRecord{
+				{
+					Name: `Alejandra /Quintanillia/`,
+					Phonetic: []*VariantNameRecord{
+						{
+							Name:             "ah-leh-han-drah /keen-tah-nee-yah/",
+							NamePieceSurname: "keen-tah-nee-yah",
+							NamePieceGiven:   "ah-leh-han-drah",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "romanized",
+			input: `
+				1 NAME 織田 /信長/
+				2 ROMN Oda /Nobunaga/
+				3 SURN Nobunaga
+				3 GIVN Oda
+				`,
+			want: []*NameRecord{
+				{
+					Name: `織田 /信長/`,
+					Romanized: []*VariantNameRecord{
+						{
+							Name:             "Oda /Nobunaga/",
+							NamePieceSurname: "Nobunaga",
+							NamePieceGiven:   "Oda",
 						},
 					},
 				},

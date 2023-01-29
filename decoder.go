@@ -325,6 +325,52 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
+		case "TYPE":
+			n.Type = value
+		case "NPFX":
+			n.NamePiecePrefix = value
+		case "GIVN":
+			n.NamePieceGiven = value
+		case "NICK":
+			n.NamePieceNick = value
+		case "SPFX":
+			n.NamePieceSurnamePrefix = value
+		case "SURN":
+			n.NamePieceSurname = value
+		case "NSFX":
+			n.NamePieceSuffix = value
+		case "PHON":
+			c := &VariantNameRecord{Name: value}
+			n.Phonetic = append(n.Phonetic, c)
+			d.pushParser(makeVariantNameParser(d, c, level))
+		case "ROMN":
+			c := &VariantNameRecord{Name: value}
+			n.Romanized = append(n.Romanized, c)
+			d.pushParser(makeVariantNameParser(d, c, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			n.Citation = append(n.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			n.Note = append(n.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+
+		return nil
+	}
+}
+
+func makeVariantNameParser(d *Decoder, n *VariantNameRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TYPE":
+			n.Type = value
 		case "NPFX":
 			n.NamePiecePrefix = value
 		case "GIVN":

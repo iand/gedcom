@@ -188,6 +188,22 @@ type SubmitterRecord struct {
 
 type NameRecord struct {
 	Name                   string
+	Type                   string
+	NamePiecePrefix        string
+	NamePieceGiven         string
+	NamePieceNick          string
+	NamePieceSurnamePrefix string
+	NamePieceSurname       string
+	NamePieceSuffix        string
+	Phonetic               []*VariantNameRecord
+	Romanized              []*VariantNameRecord
+	Citation               []*CitationRecord
+	Note                   []*NoteRecord
+}
+
+type VariantNameRecord struct {
+	Name                   string
+	Type                   string
 	NamePiecePrefix        string
 	NamePieceGiven         string
 	NamePieceNick          string
