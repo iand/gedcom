@@ -828,6 +828,7 @@ func makeMediaParser(d *Decoder, m *MediaRecord, minLevel int) parser {
 				f = m.File[len(m.File)-1]
 			}
 			f.Title = value
+			d.pushParser(makeTextParser(d, &f.Title, level))
 		case "RIN":
 			m.AutomatedRecordId = value
 		case "REFN":
@@ -870,6 +871,7 @@ func makeMediaFileParser(d *Decoder, f *FileRecord, minLevel int) parser {
 			d.pushParser(makeMediaFileFormatParser(d, f, level))
 		case "TITL":
 			f.Title = value
+			d.pushParser(makeTextParser(d, &f.Title, level))
 		default:
 			d.unhandledTag(level, tag, value, xref)
 		}
