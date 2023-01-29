@@ -339,11 +339,11 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			n.NamePieceSurname = value
 		case "NSFX":
 			n.NamePieceSuffix = value
-		case "PHON":
+		case "FONE": // 5.5.1
 			c := &VariantNameRecord{Name: value}
 			n.Phonetic = append(n.Phonetic, c)
 			d.pushParser(makeVariantNameParser(d, c, level))
-		case "ROMN":
+		case "ROMN": // 5.5.1
 			c := &VariantNameRecord{Name: value}
 			n.Romanized = append(n.Romanized, c)
 			d.pushParser(makeVariantNameParser(d, c, level))
@@ -744,21 +744,65 @@ func makeEventAdoptParser(d *Decoder, e *EventRecord, minLevel int) parser {
 	}
 }
 
-func makePlaceParser(d *Decoder, p *PlaceRecord, minLevel int) parser {
+func makePlaceParser(d *Decoder, r *PlaceRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "FONE": // 5.5.1
+			c := &VariantPlaceNameRecord{Name: value}
+			r.Phonetic = append(r.Phonetic, c)
+			d.pushParser(makeVariantPlaceNameRecordParser(d, c, level))
+		case "ROMN": // 5.5.1
+			c := &VariantPlaceNameRecord{Name: value}
+			r.Romanized = append(r.Romanized, c)
+			d.pushParser(makeVariantPlaceNameRecordParser(d, c, level))
+		case "MAP": // 5.5.1
+			d.pushParser(makePlaceMapParser(d, r, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			r.Citation = append(r.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "NOTE":
+			c := &NoteRecord{Note: value}
+			r.Note = append(r.Note, c)
+			d.pushParser(makeNoteParser(d, c, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+
+		return nil
+	}
+}
+
+func makePlaceMapParser(d *Decoder, p *PlaceRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "LATI": // 5.5.1
+			p.Latitude = value
+		case "LONG": // 5.5.1
+			p.Longitude = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+
+		return nil
+	}
+}
+
+func makeVariantPlaceNameRecordParser(d *Decoder, r *VariantPlaceNameRecord, minLevel int) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level <= minLevel {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
 
-		case "SOUR":
-			c := &CitationRecord{Source: d.source(stripXref(value))}
-			p.Citation = append(p.Citation, c)
-			d.pushParser(makeCitationParser(d, c, level))
-		case "NOTE":
-			r := &NoteRecord{Note: value}
-			p.Note = append(p.Note, r)
-			d.pushParser(makeNoteParser(d, r, level))
+		case "TYPE": // 5.5.1
+			r.Type = value
 		default:
 			d.unhandledTag(level, tag, value, xref)
 		}

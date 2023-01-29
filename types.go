@@ -246,9 +246,18 @@ type NoteRecord struct {
 }
 
 type PlaceRecord struct {
-	Name     string
-	Citation []*CitationRecord
-	Note     []*NoteRecord
+	Name      string
+	Phonetic  []*VariantPlaceNameRecord
+	Romanized []*VariantPlaceNameRecord
+	Latitude  string
+	Longitude string
+	Citation  []*CitationRecord
+	Note      []*NoteRecord
+}
+
+type VariantPlaceNameRecord struct {
+	Name string
+	Type string
 }
 
 type FamilyLinkRecord struct {

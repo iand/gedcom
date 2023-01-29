@@ -1359,7 +1359,7 @@ func TestName(t *testing.T) {
 			name: "phonetic",
 			input: `
 				1 NAME Alejandra /Quintanillia/
-				2 PHON ah-leh-han-drah /keen-tah-nee-yah/
+				2 FONE ah-leh-han-drah /keen-tah-nee-yah/
 				3 SURN keen-tah-nee-yah
 				3 GIVN ah-leh-han-drah
 				`,
@@ -1409,7 +1409,80 @@ func TestName(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(tc.want, g.Individual[0].Name); diff != "" {
-				t.Errorf("source mismatch (-want +got):\n%s", diff)
+				t.Errorf("name mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestPlace(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  PlaceRecord
+	}{
+		{
+			name: "latlong",
+			input: `
+					2 PLAC Random Place
+					3 MAP
+					4 LATI N50.40183
+					4 LONG W0.112295
+				`,
+			want: PlaceRecord{
+				Name:      `Random Place`,
+				Latitude:  "N50.40183",
+				Longitude: "W0.112295",
+			},
+		},
+		{
+			name: "phonetic",
+			input: `
+					2 PLAC Random Place
+					3 FONE ran-dom plais
+					4 TYPE simple
+				`,
+			want: PlaceRecord{
+				Name: `Random Place`,
+				Phonetic: []*VariantPlaceNameRecord{
+					{
+						Name: "ran-dom plais",
+						Type: "simple",
+					},
+				},
+			},
+		},
+		{
+			name: "romanized",
+			input: `
+					2 PLAC 中部地方
+					3 ROMN Chūbu-chihō
+					4 TYPE hepburn
+				`,
+			want: PlaceRecord{
+				Name: `中部地方`,
+				Romanized: []*VariantPlaceNameRecord{
+					{
+						Name: "Chūbu-chihō",
+						Type: "hepburn",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input = "0 @test@ INDI\n1 BIRT\n" + tc.input
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Individual[0].Event[0].Place); diff != "" {
+				t.Errorf("place mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
