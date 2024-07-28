@@ -96,6 +96,7 @@ type IndividualRecord struct {
 type MediaRecord struct {
 	Xref              string
 	File              []*FileRecord
+	Title             string
 	UserReference     []*UserReferenceRecord
 	AutomatedRecordId string
 	Change            ChangeRecord
@@ -183,7 +184,15 @@ type CitationRecord struct {
 }
 
 type SubmitterRecord struct {
-	Xref string
+	Xref                  string
+	Name                  string
+	Address               *AddressRecord
+	Media                 []*MediaRecord
+	Language              []string
+	SubmitterRecordFileID string
+	AutomatedRecordId     string
+	Note                  []*NoteRecord
+	Change                *ChangeRecord
 }
 
 type NameRecord struct {
@@ -199,6 +208,7 @@ type NameRecord struct {
 	Romanized              []*VariantNameRecord
 	Citation               []*CitationRecord
 	Note                   []*NoteRecord
+	UserDefined            []UserDefinedTag
 }
 
 type VariantNameRecord struct {

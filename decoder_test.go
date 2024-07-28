@@ -499,7 +499,7 @@ func TestSubmitter(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	submitters := []*SubmitterRecord{{}}
+	submitters := []*SubmitterRecord{{Xref: "SUBMITTER"}}
 
 	if diff := cmp.Diff(submitters, g.Submitter); diff != "" {
 		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
@@ -609,7 +609,6 @@ func TestFamily(t *testing.T) {
 						{
 							Name:   `\\network\drive\path\file name.bmp`,
 							Format: "bmp",
-							Title:  "A bmp picture",
 						},
 					},
 					Note: []*NoteRecord{
@@ -617,6 +616,7 @@ func TestFamily(t *testing.T) {
 							Note: "A note\nNote continued here. The word TEST should not be broken!",
 						},
 					},
+					Title: "A bmp picture",
 				},
 			},
 			UserDefined: []UserDefinedTag{
@@ -704,7 +704,6 @@ func TestSource(t *testing.T) {
 								{
 									Name:   `\\network\drive\path\file name.bmp`,
 									Format: "bmp",
-									Title:  "A bmp picture",
 								},
 							},
 							Note: []*NoteRecord{
@@ -712,6 +711,7 @@ func TestSource(t *testing.T) {
 									Note: "A note\nNote continued here. The word TEST should not be broken!",
 								},
 							},
+							Title: "A bmp picture",
 						},
 					},
 					UserDefined: []UserDefinedTag{
