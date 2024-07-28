@@ -207,7 +207,8 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				d.pushParser(makeIndividualParser(d, obj, level))
 			case "SUBM":
 				// TODO: parse submitters
-				g.Submitter = append(g.Submitter, &SubmitterRecord{})
+				obj := d.submitter(xref)
+				g.Submitter = append(g.Submitter, obj)
 			case "FAM":
 				obj := d.family(xref)
 				g.Family = append(g.Family, obj)
@@ -356,7 +357,13 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			n.Note = append(n.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
 		default:
-			d.unhandledTag(level, tag, value, xref)
+			n.UserDefined = append(n.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+			d.pushParser(makeUserDefinedTagParser(d, &n.UserDefined[len(n.UserDefined)-1], level))
 		}
 
 		return nil
@@ -415,6 +422,7 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 			d.pushParser(makeTextParser(d, &s.Title, level))
 		case "ABBR":
 			s.FiledBy = value
+			d.pushParser(makeTextParser(d, &s.FiledBy, level))
 		case "AUTH":
 			s.Originator = value
 			d.pushParser(makeTextParser(d, &s.Originator, level))
@@ -541,8 +549,10 @@ func makeCitationParser(d *Decoder, c *CitationRecord, minLevel int) parser {
 		switch tag {
 		case "PAGE":
 			c.Page = value
+			d.pushParser(makeTextParser(d, &c.Page, level))
 		case "QUAY":
 			c.Quay = value
+			d.pushParser(makeTextParser(d, &c.Quay, level))
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			c.Note = append(c.Note, r)
@@ -910,15 +920,8 @@ func makeMediaParser(d *Decoder, m *MediaRecord, minLevel int) parser {
 			f.Format = value
 			d.pushParser(makeMediaFileFormatParser(d, f, level))
 		case "TITL": // version 5.5
-			var f *FileRecord
-			if len(m.File) == 0 {
-				f = &FileRecord{}
-				m.File = append(m.File, f)
-			} else {
-				f = m.File[len(m.File)-1]
-			}
-			f.Title = value
-			d.pushParser(makeTextParser(d, &f.Title, level))
+			m.Title = value
+			d.pushParser(makeTextParser(d, &m.Title, level))
 		case "RIN":
 			m.AutomatedRecordId = value
 		case "REFN":
