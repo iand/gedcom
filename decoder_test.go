@@ -1482,7 +1482,95 @@ func TestPlace(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(tc.want, g.Individual[0].Event[0].Place); diff != "" {
-				t.Errorf("place mismatch (-want +got):\n%s", diff)
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestEvent(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  *EventRecord
+	}{
+		{
+			// findmypast uses the note as the value of the EVEN
+			name: "even_value_to_note",
+			input: `
+				1 EVEN was age 10 and the daughter of the head of the household
+				2 TYPE Census UK 1881
+				2 _PRIM Y
+				2 DATE 3 Apr 1881
+				`,
+			want: &EventRecord{
+				Tag:  "EVEN",
+				Type: "Census UK 1881",
+				Date: "3 Apr 1881",
+				Note: []*NoteRecord{
+					{Note: "was age 10 and the daughter of the head of the household"},
+				},
+				UserDefined: []UserDefinedTag{{Tag: "_PRIM", Value: "Y", Level: 2}},
+			},
+		},
+		{
+			// A Y after a DEAT, BIRT or CHR is allowed, indicating the event is known to have happened
+			name: "death_known",
+			input: `
+				1 DEAT Y
+				`,
+			want: &EventRecord{
+				Tag:   "DEAT",
+				Value: "Y",
+			},
+		},
+		{
+			// A Y after a DEAT, BIRT or CHR is allowed, indicating the event is known to have happened
+			name: "birt_known",
+			input: `
+				1 BIRT Y
+				`,
+			want: &EventRecord{
+				Tag:   "BIRT",
+				Value: "Y",
+			},
+		},
+		{
+			// A Y after a DEAT, BIRT or CHR is allowed, indicating the event is known to have happened
+			name: "chr_known",
+			input: `
+				1 CHR Y
+				`,
+			want: &EventRecord{
+				Tag:   "CHR",
+				Value: "Y",
+			},
+		},
+		{
+			name: "death_standard",
+			input: `
+				1 DEAT
+				2 DATE 2 OCT 1937
+				`,
+			want: &EventRecord{
+				Tag:  "DEAT",
+				Date: "2 OCT 1937",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input = "0 @test@ INDI\n" + tc.input
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Individual[0].Event[0]); diff != "" {
+				t.Errorf("event mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

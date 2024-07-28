@@ -252,7 +252,16 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 		case "SEX":
 			i.Sex = value
 		case "BIRT", "CHR", "DEAT", "BURI", "CREM", "ADOP", "BAPM", "BARM", "BASM", "BLES", "CHRA", "CONF", "FCOM", "ORDN", "NATU", "EMIG", "IMMI", "CENS", "PROB", "WILL", "GRAD", "RETI", "EVEN":
-			e := &EventRecord{Tag: tag, Value: value}
+			e := &EventRecord{Tag: tag}
+			if value != "" {
+				if value == "Y" && (tag == "BIRT" || tag == "CHR" || tag == "DEAT") {
+					e.Value = "Y"
+				} else {
+					// any event other value is invalid and added as a note instead
+					r := &NoteRecord{Note: value}
+					e.Note = append(i.Note, r)
+				}
+			}
 			i.Event = append(i.Event, e)
 			d.pushParser(makeEventParser(d, tag, e, level))
 		case "CAST", "DSCR", "EDUC", "IDNO", "NATI", "NCHI", "NMR", "OCCU", "PROP", "RELI", "RESI", "SSN", "TITL", "FACT":
