@@ -257,7 +257,7 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 				if value == "Y" && (tag == "BIRT" || tag == "CHR" || tag == "DEAT") {
 					e.Value = "Y"
 				} else {
-					// any event other value is invalid and added as a note instead
+					// event value is invalid and added as a note instead
 					r := &NoteRecord{Note: value}
 					e.Note = append(i.Note, r)
 				}
@@ -265,7 +265,16 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 			i.Event = append(i.Event, e)
 			d.pushParser(makeEventParser(d, tag, e, level))
 		case "CAST", "DSCR", "EDUC", "IDNO", "NATI", "NCHI", "NMR", "OCCU", "PROP", "RELI", "RESI", "SSN", "TITL", "FACT":
-			e := &EventRecord{Tag: tag, Value: value}
+			e := &EventRecord{Tag: tag}
+			if value != "" {
+				if tag == "RESI" {
+					// event value is invalid and added as a note instead
+					r := &NoteRecord{Note: value}
+					e.Note = append(i.Note, r)
+				} else {
+					e.Value = value
+				}
+			}
 			i.Attribute = append(i.Attribute, e)
 			d.pushParser(makeEventParser(d, tag, e, level))
 		case "FAMC":
@@ -864,7 +873,12 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 		case "CHIL":
 			f.Child = append(f.Child, d.individual(stripXref(value)))
 		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN", "RESI":
-			e := &EventRecord{Tag: tag, Value: value}
+			e := &EventRecord{Tag: tag}
+			if value != "" {
+				// any event other value is invalid and added as a note instead
+				r := &NoteRecord{Note: value}
+				e.Note = append(e.Note, r)
+			}
 			f.Event = append(f.Event, e)
 			d.pushParser(makeEventParser(d, tag, e, level))
 		case "NCHI":
