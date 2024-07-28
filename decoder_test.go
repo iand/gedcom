@@ -68,11 +68,6 @@ func TestIndividual(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Create a comparison option that ignores events
-	eventOpt := cmp.Comparer(func(a, b []*EventRecord) bool {
-		return true
-	})
-
 	// Create a comparison option that compares just names
 	nameOpt := cmp.Comparer(func(a, b *NameRecord) bool {
 		if a == nil {
@@ -84,69 +79,6 @@ func TestIndividual(t *testing.T) {
 		}
 
 		return a.Name == b.Name
-	})
-
-	// Create a comparison option that compares families by xref
-	familyOpt := cmp.Comparer(func(a, b *FamilyLinkRecord) bool {
-		if a == nil {
-			return b == nil
-		}
-
-		if b == nil {
-			return a == nil
-		}
-
-		if a.Family == nil {
-			return b.Family == nil
-		}
-
-		if b.Family == nil {
-			return a.Family == nil
-		}
-
-		return a.Family.Xref == b.Family.Xref
-	})
-
-	// Create a comparison option that compares citations by source xref only
-	sourceOpt := cmp.Comparer(func(a, b *CitationRecord) bool {
-		if a == nil {
-			return b == nil
-		}
-
-		if b == nil {
-			return a == nil
-		}
-
-		if a.Source == nil {
-			return b.Source == nil
-		}
-
-		if b.Source == nil {
-			return a.Source == nil
-		}
-
-		return a.Source.Xref == b.Source.Xref
-	})
-
-	// Create a comparison option that compares media files by name only
-	fileOpt := cmp.Comparer(func(a, b *MediaRecord) bool {
-		if a == nil {
-			return b == nil
-		}
-
-		if b == nil {
-			return a == nil
-		}
-
-		if len(a.File) == 0 {
-			return len(b.File) == 0
-		}
-
-		if len(b.File) == 0 {
-			return len(a.File) == 0
-		}
-
-		return a.File[0].Name == b.File[0].Name
 	})
 
 	individuals := []*IndividualRecord{
@@ -308,7 +240,7 @@ func TestIndividual(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(individuals, g.Individual, eventOpt, familyOpt, nameOpt, sourceOpt, fileOpt); diff != "" {
+	if diff := cmp.Diff(individuals, g.Individual, nameOpt, eventIgnoreComparer, familyXrefComparer, sourceXrefComparer, mediaFileNameCompare); diff != "" {
 		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -1488,7 +1420,7 @@ func TestPlace(t *testing.T) {
 	}
 }
 
-func TestEvent(t *testing.T) {
+func TestIndividualEvent(t *testing.T) {
 	testCases := []struct {
 		name  string
 		input string
@@ -1570,6 +1502,89 @@ func TestEvent(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(tc.want, g.Individual[0].Event[0]); diff != "" {
+				t.Errorf("event mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestIndividualAttribute(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  *EventRecord
+	}{
+		{
+			name: "even_value_to_note",
+			input: `
+				1 RESI Marital Status: MarriedRelation to Head of House: Head
+				2 DATE 1 Jun 1921
+				`,
+			want: &EventRecord{
+				Tag:  "RESI",
+				Date: "1 Jun 1921",
+				Note: []*NoteRecord{
+					{Note: "Marital Status: MarriedRelation to Head of House: Head"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input = "0 @test@ INDI\n" + tc.input
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Individual[0].Attribute[0]); diff != "" {
+				t.Errorf("event mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFamilyEvent(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		want  *EventRecord
+	}{
+		{
+			// findmypast uses the note as the value of the EVEN
+			name: "even_value_to_note",
+			input: `
+				1 EVEN was age 10 and the daughter of the head of the household
+				2 TYPE Census UK 1881
+				2 _PRIM Y
+				2 DATE 3 Apr 1881
+				`,
+			want: &EventRecord{
+				Tag:  "EVEN",
+				Type: "Census UK 1881",
+				Date: "3 Apr 1881",
+				Note: []*NoteRecord{
+					{Note: "was age 10 and the daughter of the head of the household"},
+				},
+				UserDefined: []UserDefinedTag{{Tag: "_PRIM", Value: "Y", Level: 2}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.input = "0 @test@ FAM\n" + tc.input
+			d := NewDecoder(bytes.NewReader([]byte(tc.input)))
+
+			g, err := d.Decode()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.want, g.Family[0].Event[0]); diff != "" {
 				t.Errorf("event mismatch (-want +got):\n%s", diff)
 			}
 		})

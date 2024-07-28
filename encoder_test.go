@@ -256,11 +256,11 @@ func TestDecodeEncode(t *testing.T) {
 	fmt.Println(buf.String())
 
 	// Decode the generated gedcom
-	// d2 := NewDecoder(buf)
-	// got, err := d2.Decode()
-	// if err != nil {
-	// 	t.Fatalf("decode generated gedcom got error %q, wanted no error", err)
-	// }
+	d2 := NewDecoder(buf)
+	got, err := d2.Decode()
+	if err != nil {
+		t.Fatalf("decode generated gedcom got error %q, wanted no error", err)
+	}
 
 	type dinfo struct {
 		name string
@@ -269,61 +269,33 @@ func TestDecodeEncode(t *testing.T) {
 
 	var diffs []dinfo
 
-	// // spot check some individuals
-	// indIDs := []string{"I8"}
-
-	// windmap := make(map[string]*IndividualRecord)
-	// gindmap := make(map[string]*IndividualRecord)
-	// for _, in := range want.Individual {
-	// 	windmap[in.Xref] = in
-	// }
-	// for _, in := range got.Individual {
-	// 	gindmap[in.Xref] = in
-	// }
-
-	// for _, id := range indIDs {
-	// 	wind, ok := windmap[id]
-	// 	if !ok {
-	// 		t.Errorf("id %s not found in wanted individuals", id)
-	// 		continue
-	// 	}
-	// 	gind, ok := gindmap[id]
-	// 	if !ok {
-	// 		t.Errorf("id %s not found in got individuals", id)
-	// 		continue
-	// 	}
-	// 	if diff := cmp.Diff(wind, gind); diff != "" {
-	// 		diffs = append(diffs, dinfo{name: "Individual " + id, diff: diff})
-	// 	}
-	// }
-
-	// if diff := cmp.Diff(want.Header, got.Header); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Header", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Trailer, got.Trailer); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Trailer", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Family, got.Family); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Family", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Individual, got.Individual); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Individual", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Media, got.Media); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Media", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Repository, got.Repository); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Repository", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Source, got.Source); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Source", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.Submitter, got.Submitter); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "Submitter", diff: diff})
-	// }
-	// if diff := cmp.Diff(want.UserDefined, got.UserDefined); diff != "" {
-	// 	diffs = append(diffs, dinfo{name: "UserDefined", diff: diff})
-	// }
+	if diff := cmp.Diff(want.Header, got.Header); diff != "" {
+		diffs = append(diffs, dinfo{name: "Header", diff: diff})
+	}
+	if diff := cmp.Diff(want.Trailer, got.Trailer); diff != "" {
+		diffs = append(diffs, dinfo{name: "Trailer", diff: diff})
+	}
+	if diff := cmp.Diff(want.Family, got.Family, individualXrefComparer, sourceXrefComparer); diff != "" {
+		diffs = append(diffs, dinfo{name: "Family", diff: diff})
+	}
+	if diff := cmp.Diff(want.Individual, got.Individual, familyXrefComparer, sourceXrefComparer); diff != "" {
+		diffs = append(diffs, dinfo{name: "Individual", diff: diff})
+	}
+	if diff := cmp.Diff(want.Media, got.Media, sourceXrefComparer); diff != "" {
+		diffs = append(diffs, dinfo{name: "Media", diff: diff})
+	}
+	if diff := cmp.Diff(want.Repository, got.Repository, sourceXrefComparer); diff != "" {
+		diffs = append(diffs, dinfo{name: "Repository", diff: diff})
+	}
+	if diff := cmp.Diff(want.Source, got.Source); diff != "" {
+		diffs = append(diffs, dinfo{name: "Source", diff: diff})
+	}
+	if diff := cmp.Diff(want.Submitter, got.Submitter); diff != "" {
+		diffs = append(diffs, dinfo{name: "Submitter", diff: diff})
+	}
+	if diff := cmp.Diff(want.UserDefined, got.UserDefined); diff != "" {
+		diffs = append(diffs, dinfo{name: "UserDefined", diff: diff})
+	}
 
 	for _, d := range diffs {
 		t.Logf("%s diff containes %d lines", d.name, len(d.diff))

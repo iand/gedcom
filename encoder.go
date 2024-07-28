@@ -616,7 +616,7 @@ func (e *Encoder) noteList(level int, rs []*NoteRecord) {
 		return
 	}
 	for _, sr := range rs {
-		e.note(level+1, sr)
+		e.note(level, sr)
 	}
 }
 
@@ -627,7 +627,8 @@ func (e *Encoder) note(level int, r *NoteRecord) {
 	if r == nil {
 		return
 	}
-	e.tagWithText(level, "NOTE", "")
+	e.tagWithText(level, "NOTE", r.Note)
+	e.citationList(level+1, r.Citation)
 }
 
 func (e *Encoder) citationList(level int, rs []*CitationRecord) {
