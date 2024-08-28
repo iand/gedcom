@@ -68,11 +68,6 @@ func TestIndividual(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Create a comparison option that ignores events
-	eventOpt := cmp.Comparer(func(a, b []*EventRecord) bool {
-		return true
-	})
-
 	// Create a comparison option that compares just names
 	nameOpt := cmp.Comparer(func(a, b *NameRecord) bool {
 		if a == nil {
@@ -84,69 +79,6 @@ func TestIndividual(t *testing.T) {
 		}
 
 		return a.Name == b.Name
-	})
-
-	// Create a comparison option that compares families by xref
-	familyOpt := cmp.Comparer(func(a, b *FamilyLinkRecord) bool {
-		if a == nil {
-			return b == nil
-		}
-
-		if b == nil {
-			return a == nil
-		}
-
-		if a.Family == nil {
-			return b.Family == nil
-		}
-
-		if b.Family == nil {
-			return a.Family == nil
-		}
-
-		return a.Family.Xref == b.Family.Xref
-	})
-
-	// Create a comparison option that compares citations by source xref only
-	sourceOpt := cmp.Comparer(func(a, b *CitationRecord) bool {
-		if a == nil {
-			return b == nil
-		}
-
-		if b == nil {
-			return a == nil
-		}
-
-		if a.Source == nil {
-			return b.Source == nil
-		}
-
-		if b.Source == nil {
-			return a.Source == nil
-		}
-
-		return a.Source.Xref == b.Source.Xref
-	})
-
-	// Create a comparison option that compares media files by name only
-	fileOpt := cmp.Comparer(func(a, b *MediaRecord) bool {
-		if a == nil {
-			return b == nil
-		}
-
-		if b == nil {
-			return a == nil
-		}
-
-		if len(a.File) == 0 {
-			return len(b.File) == 0
-		}
-
-		if len(b.File) == 0 {
-			return len(a.File) == 0
-		}
-
-		return a.File[0].Name == b.File[0].Name
 	})
 
 	individuals := []*IndividualRecord{
@@ -308,7 +240,7 @@ func TestIndividual(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(individuals, g.Individual, eventOpt, familyOpt, nameOpt, sourceOpt, fileOpt); diff != "" {
+	if diff := cmp.Diff(individuals, g.Individual, nameOpt, eventIgnoreComparer, familyXrefComparer, sourceXrefComparer, mediaFileNameCompare); diff != "" {
 		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
 	}
 }
