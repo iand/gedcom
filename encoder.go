@@ -37,9 +37,7 @@ func (e *Encoder) Encode(g *Gedcom) error {
 		e.family(r)
 	}
 
-	for _, r := range g.Media {
-		e.media(0, r)
-	}
+	e.mediaList(0, g.Media)
 
 	for _, r := range g.Repository {
 		e.repository(r)
@@ -350,17 +348,6 @@ func (e *Encoder) place(level int, r *PlaceRecord) {
 	e.citationList(level+1, r.Citation)
 }
 
-func (e *Encoder) variantPlaceName(level int, r *VariantPlaceNameRecord) {
-	if e.err != nil {
-		return
-	}
-	if r == nil {
-		return
-	}
-	e.tag(level, r.Name, r.Type)
-	e.maybeTag(level+1, "TYPE", r.Type)
-}
-
 func (e *Encoder) individual(r *IndividualRecord) {
 	if e.err != nil {
 		return
@@ -593,8 +580,6 @@ func (e *Encoder) name(level int, r *NameRecord) {
 	e.citationList(level+1, r.Citation)
 	e.noteList(level+1, r.Note)
 	e.userDefinedList(level+1, r.UserDefined)
-
-	return
 }
 
 func (e *Encoder) change(level int, r *ChangeRecord) {
@@ -736,7 +721,6 @@ func (e *Encoder) userReference(level int, r *UserReferenceRecord) {
 	}
 	e.maybeTagWithText(level, "REFN", r.Number)
 	e.maybeTagWithText(level+1, "TYPE", r.Type)
-	return
 }
 
 func (e *Encoder) individualRef(level int, tag string, r *IndividualRecord) {
