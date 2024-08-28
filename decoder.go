@@ -225,6 +225,8 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				obj := d.media(xref)
 				g.Media = append(g.Media, obj)
 				d.pushParser(makeMediaParser(d, obj, level))
+			case "TRLR":
+				g.Trailer = &Trailer{}
 			default:
 				g.UserDefined = append(g.UserDefined, UserDefinedTag{
 					Tag:   tag,

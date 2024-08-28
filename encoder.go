@@ -557,7 +557,7 @@ func (e *Encoder) trailer(r *Trailer) {
 	if e.err != nil {
 		return
 	}
-	// nothing to do
+	e.tag(0, "TRLR", "")
 }
 
 func (e *Encoder) name(level int, r *NameRecord) {
@@ -601,7 +601,7 @@ func (e *Encoder) change(level int, r *ChangeRecord) {
 	if e.err != nil {
 		return
 	}
-	if r == nil {
+	if r == nil || (r.Date == "" && r.Time == "" && len(r.Note) == 0) {
 		return
 	}
 	e.tagWithText(level, "CHAN", "")

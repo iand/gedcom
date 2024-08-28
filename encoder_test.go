@@ -2,7 +2,6 @@ package gedcom
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -131,29 +130,7 @@ func TestEncodeHeader(t *testing.T) {
 				"2 CONT This @@ (commercial at) character may only appear ONCE!",
 				"2 CONT Note continued here. The word TEST should not be broken!",
 				"1 _MYOWNTAG This is a non-standard tag. Not recommended but allowed",
-				// "0 @SUBMITTER@ SUBM",
-				// "1 NAME /Submitter-Name/",
-				// "1 ADDR Submitter address line 1",
-				// "2 CONT Submitter address line 2",
-				// "2 CONT Submitter address line 3",
-				// "2 CONT Submitter address line 4",
-				// "2 ADR1 Submitter address line 1",
-				// "2 ADR2 Submitter address line 2",
-				// "2 CITY Submitter address city",
-				// "2 STAE Submitter address state",
-				// "2 POST Submitter address ZIP code",
-				// "2 CTRY Submitter address country",
-				// "1 PHON Submitter phone number 1",
-				// "1 PHON Submitter phone number 2",
-				// "1 PHON Submitter phone number 3 (last one!)",
-				// "1 LANG English",
-				// "1 CHAN ",
-				// "2 DATE 19 JUN 2000",
-				// "3 TIME 12:34:56.789",
-				// "2 NOTE A note",
-				// "3 CONT Note continued here. The word TE",
-				// "3 CONC ST should not be broken!",
-				// "1 _MYOWNTAG This is a non-standard tag. Not recommended but allowed",
+				"0 TRLR",
 			},
 		},
 	}
@@ -252,8 +229,6 @@ func TestDecodeEncode(t *testing.T) {
 	if err := enc.Encode(want); err != nil {
 		t.Fatalf("encode gedcom got error %q, wanted no error", err)
 	}
-
-	fmt.Println(buf.String())
 
 	// Decode the generated gedcom
 	d2 := NewDecoder(buf)
