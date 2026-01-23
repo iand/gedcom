@@ -4,15 +4,32 @@ import (
 	"strings"
 )
 
+// ParsedName contains the components of a personal name after parsing
+// with [SplitPersonalName].
 type ParsedName struct {
-	Full     string
-	Given    string
-	Surname  string
-	Suffix   string
-	Nickname string
+	Full     string // Reconstructed full name without GEDCOM delimiters
+	Given    string // Given name(s) / first name(s)
+	Surname  string // Surname / family name / last name
+	Suffix   string // Name suffix (e.g., "Jr.", "III", "PhD")
+	Nickname string // Nickname, if present in quotes
 }
 
-// SplitPersonalName parses a name in the format "First Name /Surname/ suffix" into its components.
+// SplitPersonalName parses a GEDCOM-formatted personal name into its components.
+// GEDCOM names use slashes to delimit the surname: "Given Names /Surname/ Suffix".
+//
+// Examples:
+//
+//	SplitPersonalName("John /Smith/")
+//	// Returns: Given="John", Surname="Smith"
+//
+//	SplitPersonalName("John \"Jack\" /Smith/ Jr.")
+//	// Returns: Given="John", Nickname="Jack", Surname="Smith", Suffix="Jr."
+//
+//	SplitPersonalName("Mary Jane /van der Berg/")
+//	// Returns: Given="Mary Jane", Surname="van der Berg"
+//
+// The function also handles alternative surnames separated by slashes within
+// the surname delimiters (e.g., "/Smith/Smyth/" becomes Surname="Smith/Smyth").
 func SplitPersonalName(name string) ParsedName {
 	name = strings.TrimSpace(name)
 

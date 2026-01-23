@@ -12,7 +12,12 @@ import (
 	"strings"
 )
 
-// An Encoder encodes and writes GEDCOM objects to an input stream.
+// Encoder writes GEDCOM-encoded data to an output stream.
+// Use [NewEncoder] to create an Encoder and [Encoder.Encode] to write
+// a [Gedcom] structure.
+//
+// The encoder handles GEDCOM line length limits automatically, using
+// CONT (continuation) and CONC (concatenation) tags to split long text.
 type Encoder struct {
 	w   *bufio.Writer
 	err error
@@ -26,6 +31,8 @@ func NewEncoder(w io.Writer) *Encoder {
 	}
 }
 
+// Encode writes the GEDCOM-encoded representation of g to the encoder's output stream.
+// It writes the header, all records (individuals, families, sources, etc.), and trailer.
 func (e *Encoder) Encode(g *Gedcom) error {
 	e.header(g.Header)
 
