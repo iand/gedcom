@@ -64,57 +64,57 @@ type Trailer struct{}
 // together as husband, wife, and children, and contains family events
 // such as marriage, divorce, and census records.
 type FamilyRecord struct {
-	Xref              string              // Unique cross-reference identifier for this family (e.g., "@F1@")
-	Husband           *IndividualRecord   // Pointer to the husband/father individual
-	Wife              *IndividualRecord   // Pointer to the wife/mother individual
-	Child             []*IndividualRecord // Pointers to child individuals
-	Event             []*EventRecord      // Family events (marriage, divorce, census, etc.)
+	Xref              string                 // Unique cross-reference identifier for this family (e.g., "@F1@")
+	Husband           *IndividualRecord      // Pointer to the husband/father individual
+	Wife              *IndividualRecord      // Pointer to the wife/mother individual
+	Child             []*IndividualRecord    // Pointers to child individuals
+	Event             []*EventRecord         // Family events (marriage, divorce, census, etc.)
 	NumberOfChildren  string                 // Total number of children, may differ from len(Child)
 	UserReference     []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId string                 // Unique record ID assigned by the source system
 	Change            ChangeRecord           // Record of when this record was last modified
 	Note              []*NoteRecord          // Notes attached to this family
-	Citation          []*CitationRecord // Source citations for this family
-	Media             []*MediaRecord   // Media objects (photos, documents) for this family
-	UserDefined       []UserDefinedTag // User-defined tags (prefixed with underscore)
+	Citation          []*CitationRecord      // Source citations for this family
+	Media             []*MediaRecord         // Media objects (photos, documents) for this family
+	UserDefined       []UserDefinedTag       // User-defined tags (prefixed with underscore)
 }
 
 // IndividualRecord represents a person in GEDCOM. It contains the person's
 // names, sex, life events, attributes, and links to their families.
 type IndividualRecord struct {
-	Xref                      string               // Unique cross-reference identifier (e.g., "@I1@")
-	Name                      []*NameRecord        // Names (may have multiple for maiden names, aliases)
-	Sex                       string               // Sex: "M" for male, "F" for female, "U" for unknown
-	Event                     []*EventRecord       // Life events (birth, death, burial, etc.)
-	Attribute                 []*EventRecord       // Attributes (occupation, residence, education, etc.)
-	Parents                   []*FamilyLinkRecord  // Links to families where this person is a child
-	Family                    []*FamilyLinkRecord  // Links to families where this person is a spouse
-	Submitter                 []*SubmitterRecord   // Submitters of this record
-	Association               []*AssociationRecord // Associations with other individuals
-	PermanentRecordFileNumber string               // Permanent record file number
+	Xref                      string                 // Unique cross-reference identifier (e.g., "@I1@")
+	Name                      []*NameRecord          // Names (may have multiple for maiden names, aliases)
+	Sex                       string                 // Sex: "M" for male, "F" for female, "U" for unknown
+	Event                     []*EventRecord         // Life events (birth, death, burial, etc.)
+	Attribute                 []*EventRecord         // Attributes (occupation, residence, education, etc.)
+	Parents                   []*FamilyLinkRecord    // Links to families where this person is a child
+	Family                    []*FamilyLinkRecord    // Links to families where this person is a spouse
+	Submitter                 []*SubmitterRecord     // Submitters of this record
+	Association               []*AssociationRecord   // Associations with other individuals
+	PermanentRecordFileNumber string                 // Permanent record file number
 	AncestralFileNumber       string                 // Ancestral file number
 	UserReference             []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId         string                 // Unique record ID assigned by the source system
 	Change                    ChangeRecord           // Record of when this record was last modified
 	Note                      []*NoteRecord          // Notes attached to this individual
-	Citation                  []*CitationRecord // Source citations for this individual
-	Media                     []*MediaRecord    // Media objects (photos, documents)
-	UserDefined               []UserDefinedTag  // User-defined tags (prefixed with underscore)
+	Citation                  []*CitationRecord      // Source citations for this individual
+	Media                     []*MediaRecord         // Media objects (photos, documents)
+	UserDefined               []UserDefinedTag       // User-defined tags (prefixed with underscore)
 }
 
 // MediaRecord represents a multimedia object such as a photo, document,
 // or audio/video recording. It can be referenced by individuals, families,
 // events, and sources.
 type MediaRecord struct {
-	Xref              string       // Unique cross-reference identifier (e.g., "@M1@")
-	File              []*FileRecord // File references for this media object
+	Xref              string                 // Unique cross-reference identifier (e.g., "@M1@")
+	File              []*FileRecord          // File references for this media object
 	Title             string                 // Title or description of the media
 	UserReference     []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId string                 // Unique record ID assigned by the source system
 	Change            ChangeRecord           // Record of when this record was last modified
 	Note              []*NoteRecord          // Notes attached to this media
-	Citation          []*CitationRecord // Source citations
-	UserDefined       []UserDefinedTag  // User-defined tags
+	Citation          []*CitationRecord      // Source citations
+	UserDefined       []UserDefinedTag       // User-defined tags
 }
 
 // FileRecord contains information about a multimedia file.
@@ -142,9 +142,9 @@ type ChangeRecord struct {
 // RepositoryRecord represents a repository where source documents are held,
 // such as a library, archive, or private collection.
 type RepositoryRecord struct {
-	Xref              string           // Unique cross-reference identifier (e.g., "@R1@")
-	Name              string           // Name of the repository
-	Address           AddressRecord    // Address of the repository
+	Xref              string                 // Unique cross-reference identifier (e.g., "@R1@")
+	Name              string                 // Name of the repository
+	Address           AddressRecord          // Address of the repository
 	Note              []*NoteRecord          // Notes about the repository
 	UserReference     []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId string                 // Unique record ID assigned by the source system
@@ -167,8 +167,8 @@ type SourceRecord struct {
 	AutomatedRecordId string                  // Unique record ID assigned by the source system
 	Change            ChangeRecord            // Record of when this record was last modified
 	Note              []*NoteRecord           // Notes about the source
-	Media             []*MediaRecord   // Media objects (photos of documents, etc.)
-	UserDefined       []UserDefinedTag // User-defined tags
+	Media             []*MediaRecord          // Media objects (photos of documents, etc.)
+	UserDefined       []UserDefinedTag        // User-defined tags
 }
 
 // SourceDataRecord contains data recorded from a source.
@@ -185,9 +185,9 @@ type SourceEventRecord struct {
 
 // SourceRepositoryRecord links a source to its repository.
 type SourceRepositoryRecord struct {
-	Repository *RepositoryRecord          // The repository holding the source
-	Note       []*NoteRecord              // Notes about the source at this repository
-	CallNumber []*SourceCallNumberRecord  // Call numbers for locating the source
+	Repository *RepositoryRecord         // The repository holding the source
+	Note       []*NoteRecord             // Notes about the source at this repository
+	CallNumber []*SourceCallNumberRecord // Call numbers for locating the source
 }
 
 // SourceCallNumberRecord contains a call number for a source in a repository.
@@ -217,10 +217,10 @@ type SubmitterRecord struct {
 	Address               *AddressRecord // Address of the submitter
 	Media                 []*MediaRecord // Media objects (e.g., photo of submitter)
 	Language              []string       // Languages used by the submitter
-	SubmitterRecordFileID string        // Submitter record file identifier
-	AutomatedRecordId     string        // Unique record ID assigned by the source system
-	Note                  []*NoteRecord // Notes from the submitter
-	Change                *ChangeRecord // Record of when this record was last modified
+	SubmitterRecordFileID string         // Submitter record file identifier
+	AutomatedRecordId     string         // Unique record ID assigned by the source system
+	Note                  []*NoteRecord  // Notes from the submitter
+	Change                *ChangeRecord  // Record of when this record was last modified
 }
 
 // NameRecord represents a name for an individual. An individual may have
@@ -270,23 +270,23 @@ type DataRecord struct {
 // Common attribute tags include OCCU (occupation), RESI (residence),
 // EDUC (education), RELI (religion).
 type EventRecord struct {
-	Tag                  string           // Event type tag (e.g., "BIRT", "DEAT", "MARR")
-	Value                string           // Event value, often "Y" to indicate event occurred
-	Type                 string           // Detailed event type for generic EVEN tags
-	Date                 string           // Date in GEDCOM date format
-	Place                PlaceRecord      // Location where the event occurred
-	Address              AddressRecord    // Address associated with the event
-	Age                  string           // Age of the individual at the time of the event
-	ResponsibleAgency    string           // Agency responsible for the record
-	ReligiousAffiliation string           // Religious affiliation associated with event
-	Cause                string           // Cause (e.g., cause of death)
-	RestrictionNotice    string           // Privacy restriction (GEDCOM 5.5.1)
-	ChildInFamily        *FamilyRecord    // Link to parent family for birth events
-	AdoptedByParent      string           // For adoption: "HUSB", "WIFE", or "BOTH"
+	Tag                  string            // Event type tag (e.g., "BIRT", "DEAT", "MARR")
+	Value                string            // Event value, often "Y" to indicate event occurred
+	Type                 string            // Detailed event type for generic EVEN tags
+	Date                 string            // Date in GEDCOM date format
+	Place                PlaceRecord       // Location where the event occurred
+	Address              AddressRecord     // Address associated with the event
+	Age                  string            // Age of the individual at the time of the event
+	ResponsibleAgency    string            // Agency responsible for the record
+	ReligiousAffiliation string            // Religious affiliation associated with event
+	Cause                string            // Cause (e.g., cause of death)
+	RestrictionNotice    string            // Privacy restriction (GEDCOM 5.5.1)
+	ChildInFamily        *FamilyRecord     // Link to parent family for birth events
+	AdoptedByParent      string            // For adoption: "HUSB", "WIFE", or "BOTH"
 	Citation             []*CitationRecord // Source citations for this event
-	Media                []*MediaRecord   // Media objects (e.g., photos, certificates)
-	Note                 []*NoteRecord    // Notes about this event
-	UserDefined          []UserDefinedTag // User-defined tags
+	Media                []*MediaRecord    // Media objects (e.g., photos, certificates)
+	Note                 []*NoteRecord     // Notes about this event
+	UserDefined          []UserDefinedTag  // User-defined tags
 }
 
 // NoteRecord contains a note or comment attached to a record.
@@ -298,13 +298,13 @@ type NoteRecord struct {
 // PlaceRecord represents a geographic location. The Name field typically
 // contains a comma-separated jurisdiction hierarchy (e.g., "City, County, State, Country").
 type PlaceRecord struct {
-	Name      string                     // Place name (jurisdiction hierarchy)
-	Phonetic  []*VariantPlaceNameRecord  // Phonetic variants of the place name
-	Romanized []*VariantPlaceNameRecord  // Romanized variants of the place name
-	Latitude  string                     // Latitude in GEDCOM format (e.g., "N50.9333")
-	Longitude string                     // Longitude in GEDCOM format (e.g., "W1.8")
-	Citation  []*CitationRecord          // Source citations
-	Note      []*NoteRecord              // Notes about the place
+	Name      string                    // Place name (jurisdiction hierarchy)
+	Phonetic  []*VariantPlaceNameRecord // Phonetic variants of the place name
+	Romanized []*VariantPlaceNameRecord // Romanized variants of the place name
+	Latitude  string                    // Latitude in GEDCOM format (e.g., "N50.9333")
+	Longitude string                    // Longitude in GEDCOM format (e.g., "W1.8")
+	Citation  []*CitationRecord         // Source citations
+	Note      []*NoteRecord             // Notes about the place
 }
 
 // VariantPlaceNameRecord represents a phonetic or romanized variant of a place name.
