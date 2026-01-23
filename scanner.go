@@ -11,15 +11,19 @@ import (
 	"strconv"
 )
 
+// Line represents a single line from a GEDCOM file after tokenization.
+// A GEDCOM line has the format: "level [xref] tag [value]"
+// For example: "0 @I1@ INDI" or "1 NAME John /Smith/"
 type Line struct {
-	Level      int
-	Tag        string
-	Value      string
-	Xref       string
-	LineNumber int // the line number of the input file
-	Offset     int // the character offset in the input file
+	Level      int    // Hierarchy level (0 for top-level records)
+	Tag        string // GEDCOM tag (e.g., "INDI", "NAME", "BIRT")
+	Value      string // Optional value following the tag
+	Xref       string // Optional cross-reference identifier (e.g., "I1" from "@I1@")
+	LineNumber int    // Line number in the input file (1-indexed)
+	Offset     int    // Character offset in the input file
 }
 
+// String returns the line in GEDCOM format.
 func (l *Line) String() string {
 	if l.Xref != "" {
 		return fmt.Sprintf("%d @%s@ %s %s", l.Level, l.Xref, l.Tag, l.Value)
@@ -27,7 +31,12 @@ func (l *Line) String() string {
 	return fmt.Sprintf("%d %s %s", l.Level, l.Tag, l.Value)
 }
 
-// A Scanner is a GEDCOM scanning state machine.
+// Scanner tokenizes GEDCOM input line by line. It is a low-level component
+// used by [Decoder]. Most users should use [Decoder] directly instead.
+//
+// A Scanner reads from an [io.RuneScanner] and breaks the input into
+// GEDCOM lines, parsing the level, optional cross-reference, tag, and
+// optional value from each line.
 type Scanner struct {
 	r      io.RuneScanner
 	err    error
@@ -41,7 +50,9 @@ type Scanner struct {
 	xref   string
 }
 
-// NewScanner creates a new Scanner ready for use.
+// NewScanner creates a new Scanner that reads from r.
+// Use [Scanner.Next] to advance through the input and [Scanner.Line]
+// to retrieve the current line after each successful call to Next.
 func NewScanner(r io.RuneScanner) *Scanner {
 	return &Scanner{
 		r:     r,
@@ -307,10 +318,13 @@ func (s *Scanner) Err() error {
 	return s.err
 }
 
+// ScanErr represents a scanning error with location information.
+// It wraps the underlying error and includes the line number and
+// character offset where the error occurred.
 type ScanErr struct {
-	Err        error
-	LineNumber int
-	Offset     int
+	Err        error // The underlying error
+	LineNumber int   // Line number where the error occurred (1-indexed)
+	Offset     int   // Character offset within the line
 }
 
 func (e *ScanErr) Error() string {

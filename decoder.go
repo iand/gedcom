@@ -3,7 +3,6 @@ This is free and unencumbered software released into the public domain. For more
 information, see <http://unlicense.org/> or the accompanying UNLICENSE file.
 */
 
-// Package gedcom provides a functions to parse GEDCOM files.
 package gedcom
 
 import (
@@ -31,6 +30,9 @@ func NewDecoder(r io.Reader) *Decoder {
 	}
 }
 
+// LogUnhandledTags configures the decoder to log any unrecognized GEDCOM tags
+// to the provided writer. This is useful for debugging GEDCOM files that
+// contain non-standard or vendor-specific tags.
 func (d *Decoder) LogUnhandledTags(w io.Writer) {
 	d.tagLogger = log.New(w, "", log.Lshortfile)
 }
