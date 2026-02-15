@@ -30,6 +30,7 @@ var examples = []example{
 	{[]byte("0 @OTHER@ SUBM\n"), 0, `SUBM`, ``, "OTHER"},
 	{[]byte("1 PUBL Corp, Inc.\n"), 1, `PUBL`, `Corp, Inc.`, ""},
 	{[]byte("1 NOTE <i>markup</i>. plain\n"), 1, `NOTE`, `<i>markup</i>. plain`, ""},
+	{[]byte("\xEF\xBB\xBF0 HEAD\n"), 0, `HEAD`, ``, ""},
 }
 
 func TestNextTagFound(t *testing.T) {

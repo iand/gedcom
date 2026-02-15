@@ -431,7 +431,38 @@ func TestSubmitter(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	submitters := []*SubmitterRecord{{Xref: "SUBMITTER"}}
+	submitters := []*SubmitterRecord{{
+		Xref: "SUBMITTER",
+		Name: "/Submitter-Name/",
+		Address: &AddressRecord{
+			Address: []*AddressDetail{
+				{
+					Full:       "Submitter address line 1\nSubmitter address line 2\nSubmitter address line 3\nSubmitter address line 4",
+					Line1:      "Submitter address line 1",
+					Line2:      "Submitter address line 2",
+					City:       "Submitter address city",
+					State:      "Submitter address state",
+					PostalCode: "Submitter address ZIP code",
+					Country:    "Submitter address country",
+				},
+			},
+			Phone: []string{
+				"Submitter phone number 1",
+				"Submitter phone number 2",
+				"Submitter phone number 3 (last one!)",
+			},
+		},
+		Language: []string{"English"},
+		Change: &ChangeRecord{
+			Date: "19 JUN 2000",
+			Time: "12:34:56.789",
+			Note: []*NoteRecord{
+				{
+					Note: "A note\nNote continued here. The word TEST should not be broken!",
+				},
+			},
+		},
+	}}
 
 	if diff := cmp.Diff(submitters, g.Submitter); diff != "" {
 		t.Errorf("submitter mismatch (-want +got):\n%s", diff)
@@ -758,7 +789,17 @@ func TestHeader(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(header, g.Header); diff != "" {
+	submOpt := cmp.Comparer(func(a, b *SubmitterRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+		if b == nil {
+			return false
+		}
+		return a.Xref == b.Xref
+	})
+
+	if diff := cmp.Diff(header, g.Header, submOpt); diff != "" {
 		t.Errorf("header mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -1588,5 +1629,390 @@ func TestFamilyEvent(t *testing.T) {
 				t.Errorf("event mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestGedcom7Decode(t *testing.T) {
+	data, err := os.ReadFile("testdata/gedcom7.ged")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	d := NewDecoder(bytes.NewReader(data))
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Shared note comparers
+	sharedNoteOpt := cmp.Comparer(func(a, b *SharedNoteRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+		if b == nil {
+			return false
+		}
+		return a.Xref == b.Xref
+	})
+
+	indOpt := cmp.Comparer(func(a, b *IndividualRecord) bool {
+		if a == nil {
+			return b == nil
+		}
+		if b == nil {
+			return false
+		}
+		return a.Xref == b.Xref
+	})
+
+	t.Run("header_schema", func(t *testing.T) {
+		if g.Header == nil {
+			t.Fatal("header is nil")
+		}
+		if g.Header.Schema == nil {
+			t.Fatal("schema is nil")
+		}
+		want := &SchemaRecord{
+			Tag: []*SchemaTagRecord{
+				{Tag: "_MYEXT", URI: "http://example.com/myext"},
+				{Tag: "_OTHER", URI: "http://example.com/other"},
+			},
+		}
+		if diff := cmp.Diff(want, g.Header.Schema); diff != "" {
+			t.Errorf("schema mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("shared_note", func(t *testing.T) {
+		if len(g.SharedNote) != 1 {
+			t.Fatalf("expected 1 shared note, got %d", len(g.SharedNote))
+		}
+		sn := g.SharedNote[0]
+		if sn.Xref != "N1" {
+			t.Errorf("shared note xref: got %q, want %q", sn.Xref, "N1")
+		}
+		if sn.Note != "This is a shared note" {
+			t.Errorf("shared note text: got %q, want %q", sn.Note, "This is a shared note")
+		}
+		if sn.Mime != "text/plain" {
+			t.Errorf("shared note mime: got %q, want %q", sn.Mime, "text/plain")
+		}
+		if sn.Language != "en" {
+			t.Errorf("shared note language: got %q, want %q", sn.Language, "en")
+		}
+		if len(sn.Translation) != 1 {
+			t.Fatalf("expected 1 translation, got %d", len(sn.Translation))
+		}
+		if sn.Translation[0].Value != "Ceci est une note partagee" {
+			t.Errorf("translation value: got %q, want %q", sn.Translation[0].Value, "Ceci est une note partagee")
+		}
+		if sn.Translation[0].Language != "fr" {
+			t.Errorf("translation language: got %q, want %q", sn.Translation[0].Language, "fr")
+		}
+	})
+
+	t.Run("individual_gedcom7_fields", func(t *testing.T) {
+		if len(g.Individual) < 1 {
+			t.Fatal("no individuals")
+		}
+		i := g.Individual[0]
+		if i.UID != "12345678-1234-1234-1234-123456789012" {
+			t.Errorf("UID: got %q", i.UID)
+		}
+		if i.RestrictionNotice != "locked" {
+			t.Errorf("RestrictionNotice: got %q", i.RestrictionNotice)
+		}
+		if len(i.ExternalID) != 1 {
+			t.Fatalf("expected 1 external id, got %d", len(i.ExternalID))
+		}
+		if i.ExternalID[0].ID != "ext-id-123" {
+			t.Errorf("ExternalID.ID: got %q", i.ExternalID[0].ID)
+		}
+		if i.ExternalID[0].Type != "http://example.com/id" {
+			t.Errorf("ExternalID.Type: got %q", i.ExternalID[0].Type)
+		}
+		if i.Creation.Date != "1 JAN 2024" {
+			t.Errorf("Creation.Date: got %q", i.Creation.Date)
+		}
+		if i.Creation.Time != "12:00:00" {
+			t.Errorf("Creation.Time: got %q", i.Creation.Time)
+		}
+		if len(i.SharedNote) != 1 || i.SharedNote[0].Xref != "N1" {
+			t.Errorf("SharedNote: got %v", i.SharedNote)
+		}
+	})
+
+	t.Run("individual_name_translation", func(t *testing.T) {
+		if len(g.Individual) < 1 {
+			t.Fatal("no individuals")
+		}
+		i := g.Individual[0]
+		if len(i.Name) != 1 {
+			t.Fatalf("expected 1 name, got %d", len(i.Name))
+		}
+		n := i.Name[0]
+		if n.RestrictionNotice != "confidential" {
+			t.Errorf("name RestrictionNotice: got %q", n.RestrictionNotice)
+		}
+		if len(n.Translation) != 1 {
+			t.Fatalf("expected 1 name translation, got %d", len(n.Translation))
+		}
+		if n.Translation[0].Value != "Jean /Forgeron/" {
+			t.Errorf("name translation: got %q", n.Translation[0].Value)
+		}
+		if n.Translation[0].Language != "fr" {
+			t.Errorf("name translation language: got %q", n.Translation[0].Language)
+		}
+		if len(n.SharedNote) != 1 || n.SharedNote[0].Xref != "N1" {
+			t.Errorf("name SharedNote: got %v", n.SharedNote)
+		}
+	})
+
+	t.Run("individual_non_event", func(t *testing.T) {
+		i := g.Individual[0]
+		if len(i.NonEvent) != 1 {
+			t.Fatalf("expected 1 non-event, got %d", len(i.NonEvent))
+		}
+		ne := i.NonEvent[0]
+		if ne.Tag != "NO" || ne.Value != "MARR" {
+			t.Errorf("non-event: got tag=%q value=%q", ne.Tag, ne.Value)
+		}
+		if ne.Date != "BEF 2020" {
+			t.Errorf("non-event date: got %q", ne.Date)
+		}
+	})
+
+	t.Run("event_sdate_and_age", func(t *testing.T) {
+		i := g.Individual[0]
+		if len(i.Event) < 1 {
+			t.Fatal("no events")
+		}
+		e := i.Event[0]
+		if e.Tag != "BIRT" {
+			t.Fatalf("expected BIRT event, got %q", e.Tag)
+		}
+		if e.SortDate != "1990-01-01" {
+			t.Errorf("SortDate: got %q", e.SortDate)
+		}
+		if e.Age != "0y" {
+			t.Errorf("Age: got %q", e.Age)
+		}
+		if len(e.SharedNote) != 1 || e.SharedNote[0].Xref != "N1" {
+			t.Errorf("event SharedNote: got %v", e.SharedNote)
+		}
+	})
+
+	t.Run("individual_association", func(t *testing.T) {
+		i := g.Individual[0]
+		if len(i.Association) != 1 {
+			t.Fatalf("expected 1 association, got %d", len(i.Association))
+		}
+		a := i.Association[0]
+		if a.Xref != "I2" {
+			t.Errorf("association xref: got %q", a.Xref)
+		}
+		if a.Role != "GODP" {
+			t.Errorf("association role: got %q", a.Role)
+		}
+		if a.Phrase != "Godfather at baptism" {
+			t.Errorf("association phrase: got %q", a.Phrase)
+		}
+		if a.Relation != "godparent" {
+			t.Errorf("association relation: got %q", a.Relation)
+		}
+	})
+
+	t.Run("family_gedcom7_fields", func(t *testing.T) {
+		if len(g.Family) < 1 {
+			t.Fatal("no families")
+		}
+		f := g.Family[0]
+		if f.UID != "family-uid-001" {
+			t.Errorf("family UID: got %q", f.UID)
+		}
+		if f.RestrictionNotice != "privacy" {
+			t.Errorf("family RestrictionNotice: got %q", f.RestrictionNotice)
+		}
+		if len(f.ExternalID) != 1 || f.ExternalID[0].ID != "fam-ext-id" {
+			t.Errorf("family ExternalID: got %v", f.ExternalID)
+		}
+		if f.Creation.Date != "2 FEB 2024" {
+			t.Errorf("family Creation.Date: got %q", f.Creation.Date)
+		}
+		if len(f.SharedNote) != 1 || f.SharedNote[0].Xref != "N1" {
+			t.Errorf("family SharedNote: got %v", f.SharedNote)
+		}
+		if len(f.NonEvent) != 1 || f.NonEvent[0].Value != "DIV" {
+			t.Errorf("family NonEvent: got %v", f.NonEvent)
+		}
+	})
+
+	t.Run("family_slgs_and_fact", func(t *testing.T) {
+		f := g.Family[0]
+		// Events: MARR, SLGS, FACT
+		if len(f.Event) != 3 {
+			t.Fatalf("expected 3 family events, got %d", len(f.Event))
+		}
+		if f.Event[1].Tag != "SLGS" {
+			t.Errorf("expected SLGS event, got %q", f.Event[1].Tag)
+		}
+		if f.Event[2].Tag != "FACT" {
+			t.Errorf("expected FACT event, got %q", f.Event[2].Tag)
+		}
+	})
+
+	t.Run("source_gedcom7_fields", func(t *testing.T) {
+		if len(g.Source) < 1 {
+			t.Fatal("no sources")
+		}
+		s := g.Source[0]
+		if s.UID != "source-uid-001" {
+			t.Errorf("source UID: got %q", s.UID)
+		}
+		if s.RestrictionNotice != "locked" {
+			t.Errorf("source RestrictionNotice: got %q", s.RestrictionNotice)
+		}
+		if s.Creation.Date != "3 MAR 2024" {
+			t.Errorf("source Creation.Date: got %q", s.Creation.Date)
+		}
+		if len(s.SharedNote) != 1 || s.SharedNote[0].Xref != "N1" {
+			t.Errorf("source SharedNote: got %v", s.SharedNote)
+		}
+	})
+
+	t.Run("repository_gedcom7_fields", func(t *testing.T) {
+		if len(g.Repository) < 1 {
+			t.Fatal("no repositories")
+		}
+		r := g.Repository[0]
+		if r.UID != "repo-uid-001" {
+			t.Errorf("repo UID: got %q", r.UID)
+		}
+		if r.Creation.Date != "4 APR 2024" {
+			t.Errorf("repo Creation.Date: got %q", r.Creation.Date)
+		}
+		if len(r.SharedNote) != 1 || r.SharedNote[0].Xref != "N1" {
+			t.Errorf("repo SharedNote: got %v", r.SharedNote)
+		}
+	})
+
+	t.Run("media_gedcom7_fields", func(t *testing.T) {
+		if len(g.Media) < 1 {
+			t.Fatal("no media")
+		}
+		m := g.Media[0]
+		if m.UID != "media-uid-001" {
+			t.Errorf("media UID: got %q", m.UID)
+		}
+		if m.Creation.Date != "5 MAY 2024" {
+			t.Errorf("media Creation.Date: got %q", m.Creation.Date)
+		}
+		if len(m.SharedNote) != 1 || m.SharedNote[0].Xref != "N1" {
+			t.Errorf("media SharedNote: got %v", m.SharedNote)
+		}
+		// Crop
+		if len(m.File) < 1 {
+			t.Fatal("no media files")
+		}
+		f := m.File[0]
+		if f.Crop == nil {
+			t.Fatal("crop is nil")
+		}
+		if f.Crop.Top != "10" || f.Crop.Left != "20" || f.Crop.Width != "100" || f.Crop.Height != "200" {
+			t.Errorf("crop: got %+v", f.Crop)
+		}
+	})
+
+	t.Run("submitter_gedcom7_fields", func(t *testing.T) {
+		// Find the submitter with UID
+		var found *SubmitterRecord
+		for _, s := range g.Submitter {
+			if s.UID != "" {
+				found = s
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("no submitter with UID found")
+		}
+		if found.UID != "subm-uid-001" {
+			t.Errorf("submitter UID: got %q", found.UID)
+		}
+		if found.Creation.Date != "6 JUN 2024" {
+			t.Errorf("submitter Creation.Date: got %q", found.Creation.Date)
+		}
+		if len(found.SharedNote) != 1 || found.SharedNote[0].Xref != "N1" {
+			t.Errorf("submitter SharedNote: got %v", found.SharedNote)
+		}
+	})
+
+	_ = sharedNoteOpt
+	_ = indOpt
+}
+
+func TestGedcom7RoundTrip(t *testing.T) {
+	data, err := os.ReadFile("testdata/gedcom7.ged")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	d := NewDecoder(bytes.NewReader(data))
+	g, err := d.Decode()
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	if err := enc.Encode(g); err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+
+	// Decode the re-encoded output
+	d2 := NewDecoder(bytes.NewReader(buf.Bytes()))
+	g2, err := d2.Decode()
+	if err != nil {
+		t.Fatalf("re-decode: %v", err)
+	}
+
+	// Compare key fields survive round-trip
+	if len(g.SharedNote) != len(g2.SharedNote) {
+		t.Errorf("shared notes: got %d, want %d", len(g2.SharedNote), len(g.SharedNote))
+	}
+	if len(g.SharedNote) > 0 && len(g2.SharedNote) > 0 {
+		if g.SharedNote[0].Note != g2.SharedNote[0].Note {
+			t.Errorf("shared note text: got %q, want %q", g2.SharedNote[0].Note, g.SharedNote[0].Note)
+		}
+		if g.SharedNote[0].Mime != g2.SharedNote[0].Mime {
+			t.Errorf("shared note mime: got %q, want %q", g2.SharedNote[0].Mime, g.SharedNote[0].Mime)
+		}
+	}
+
+	if len(g.Individual) > 0 && len(g2.Individual) > 0 {
+		i1, i2 := g.Individual[0], g2.Individual[0]
+		if i1.UID != i2.UID {
+			t.Errorf("individual UID: got %q, want %q", i2.UID, i1.UID)
+		}
+		if i1.RestrictionNotice != i2.RestrictionNotice {
+			t.Errorf("individual RESN: got %q, want %q", i2.RestrictionNotice, i1.RestrictionNotice)
+		}
+		if i1.Creation.Date != i2.Creation.Date {
+			t.Errorf("individual CREA date: got %q, want %q", i2.Creation.Date, i1.Creation.Date)
+		}
+	}
+
+	if len(g.Family) > 0 && len(g2.Family) > 0 {
+		f1, f2 := g.Family[0], g2.Family[0]
+		if f1.UID != f2.UID {
+			t.Errorf("family UID: got %q, want %q", f2.UID, f1.UID)
+		}
+	}
+
+	if g.Header != nil && g2.Header != nil {
+		if g.Header.Schema != nil && g2.Header.Schema != nil {
+			if len(g.Header.Schema.Tag) != len(g2.Header.Schema.Tag) {
+				t.Errorf("schema tags: got %d, want %d", len(g2.Header.Schema.Tag), len(g.Header.Schema.Tag))
+			}
+		}
 	}
 }

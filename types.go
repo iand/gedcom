@@ -15,6 +15,7 @@ type Gedcom struct {
 	Repository  []*RepositoryRecord
 	Source      []*SourceRecord
 	Submitter   []*SubmitterRecord
+	SharedNote  []*SharedNoteRecord
 	Trailer     *Trailer
 	UserDefined []UserDefinedTag
 }
@@ -36,6 +37,7 @@ type Header struct {
 	Language            string
 	Place               PlaceRecord
 	Note                string
+	Schema              *SchemaRecord
 	UserDefined         []UserDefinedTag
 }
 
@@ -69,11 +71,17 @@ type FamilyRecord struct {
 	Wife              *IndividualRecord      // Pointer to the wife/mother individual
 	Child             []*IndividualRecord    // Pointers to child individuals
 	Event             []*EventRecord         // Family events (marriage, divorce, census, etc.)
+	NonEvent          []*EventRecord         // Non-events (GEDCOM 7.0 NO tag)
 	NumberOfChildren  string                 // Total number of children, may differ from len(Child)
+	UID               string                 // Unique identifier (GEDCOM 7.0)
+	ExternalID        []*ExternalIDRecord    // External identifiers (GEDCOM 7.0)
+	RestrictionNotice string                 // Privacy restriction (GEDCOM 7.0)
 	UserReference     []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId string                 // Unique record ID assigned by the source system
 	Change            ChangeRecord           // Record of when this record was last modified
+	Creation          CreationRecord         // Record creation date (GEDCOM 7.0)
 	Note              []*NoteRecord          // Notes attached to this family
+	SharedNote        []*SharedNoteRecord    // Shared note references (GEDCOM 7.0)
 	Citation          []*CitationRecord      // Source citations for this family
 	Media             []*MediaRecord         // Media objects (photos, documents) for this family
 	UserDefined       []UserDefinedTag       // User-defined tags (prefixed with underscore)
@@ -87,16 +95,22 @@ type IndividualRecord struct {
 	Sex                       string                 // Sex: "M" for male, "F" for female, "U" for unknown
 	Event                     []*EventRecord         // Life events (birth, death, burial, etc.)
 	Attribute                 []*EventRecord         // Attributes (occupation, residence, education, etc.)
+	NonEvent                  []*EventRecord         // Non-events (GEDCOM 7.0 NO tag)
 	Parents                   []*FamilyLinkRecord    // Links to families where this person is a child
 	Family                    []*FamilyLinkRecord    // Links to families where this person is a spouse
 	Submitter                 []*SubmitterRecord     // Submitters of this record
 	Association               []*AssociationRecord   // Associations with other individuals
 	PermanentRecordFileNumber string                 // Permanent record file number
 	AncestralFileNumber       string                 // Ancestral file number
+	UID                       string                 // Unique identifier (GEDCOM 7.0)
+	ExternalID                []*ExternalIDRecord    // External identifiers (GEDCOM 7.0)
+	RestrictionNotice         string                 // Privacy restriction (GEDCOM 7.0)
 	UserReference             []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId         string                 // Unique record ID assigned by the source system
 	Change                    ChangeRecord           // Record of when this record was last modified
+	Creation                  CreationRecord         // Record creation date (GEDCOM 7.0)
 	Note                      []*NoteRecord          // Notes attached to this individual
+	SharedNote                []*SharedNoteRecord    // Shared note references (GEDCOM 7.0)
 	Citation                  []*CitationRecord      // Source citations for this individual
 	Media                     []*MediaRecord         // Media objects (photos, documents)
 	UserDefined               []UserDefinedTag       // User-defined tags (prefixed with underscore)
@@ -109,10 +123,14 @@ type MediaRecord struct {
 	Xref              string                 // Unique cross-reference identifier (e.g., "@M1@")
 	File              []*FileRecord          // File references for this media object
 	Title             string                 // Title or description of the media
+	UID               string                 // Unique identifier (GEDCOM 7.0)
+	ExternalID        []*ExternalIDRecord    // External identifiers (GEDCOM 7.0)
 	UserReference     []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId string                 // Unique record ID assigned by the source system
 	Change            ChangeRecord           // Record of when this record was last modified
+	Creation          CreationRecord         // Record creation date (GEDCOM 7.0)
 	Note              []*NoteRecord          // Notes attached to this media
+	SharedNote        []*SharedNoteRecord    // Shared note references (GEDCOM 7.0)
 	Citation          []*CitationRecord      // Source citations
 	UserDefined       []UserDefinedTag       // User-defined tags
 }
@@ -123,6 +141,7 @@ type FileRecord struct {
 	Format      string           // File format (e.g., "jpeg", "gif", "pdf")
 	FormatType  string           // Media type (e.g., "photo", "document")
 	Title       string           // Title or caption for this file
+	Crop        *CropRecord      // Crop region for the file (GEDCOM 7.0)
 	UserDefined []UserDefinedTag // User-defined tags
 }
 
@@ -145,10 +164,14 @@ type RepositoryRecord struct {
 	Xref              string                 // Unique cross-reference identifier (e.g., "@R1@")
 	Name              string                 // Name of the repository
 	Address           AddressRecord          // Address of the repository
+	UID               string                 // Unique identifier (GEDCOM 7.0)
+	ExternalID        []*ExternalIDRecord    // External identifiers (GEDCOM 7.0)
 	Note              []*NoteRecord          // Notes about the repository
+	SharedNote        []*SharedNoteRecord    // Shared note references (GEDCOM 7.0)
 	UserReference     []*UserReferenceRecord // User-provided reference numbers
 	AutomatedRecordId string                 // Unique record ID assigned by the source system
 	Change            ChangeRecord           // Record of when this record was last modified
+	Creation          CreationRecord         // Record creation date (GEDCOM 7.0)
 	UserDefined       []UserDefinedTag       // User-defined tags
 }
 
@@ -163,10 +186,15 @@ type SourceRecord struct {
 	PublicationFacts  string                  // Publication information
 	Text              string                  // Verbatim text from the source
 	Repository        *SourceRepositoryRecord // Repository where the source is held
+	UID               string                  // Unique identifier (GEDCOM 7.0)
+	ExternalID        []*ExternalIDRecord     // External identifiers (GEDCOM 7.0)
+	RestrictionNotice string                  // Privacy restriction (GEDCOM 7.0)
 	UserReference     []*UserReferenceRecord  // User-provided reference numbers
 	AutomatedRecordId string                  // Unique record ID assigned by the source system
 	Change            ChangeRecord            // Record of when this record was last modified
+	Creation          CreationRecord          // Record creation date (GEDCOM 7.0)
 	Note              []*NoteRecord           // Notes about the source
+	SharedNote        []*SharedNoteRecord     // Shared note references (GEDCOM 7.0)
 	Media             []*MediaRecord          // Media objects (photos of documents, etc.)
 	UserDefined       []UserDefinedTag        // User-defined tags
 }
@@ -212,15 +240,19 @@ type CitationRecord struct {
 // SubmitterRecord contains information about the person or organization
 // that submitted the genealogical data.
 type SubmitterRecord struct {
-	Xref                  string         // Unique cross-reference identifier (e.g., "@SUBM1@")
-	Name                  string         // Name of the submitter
-	Address               *AddressRecord // Address of the submitter
-	Media                 []*MediaRecord // Media objects (e.g., photo of submitter)
-	Language              []string       // Languages used by the submitter
-	SubmitterRecordFileID string         // Submitter record file identifier
-	AutomatedRecordId     string         // Unique record ID assigned by the source system
-	Note                  []*NoteRecord  // Notes from the submitter
-	Change                *ChangeRecord  // Record of when this record was last modified
+	Xref                  string              // Unique cross-reference identifier (e.g., "@SUBM1@")
+	Name                  string              // Name of the submitter
+	Address               *AddressRecord      // Address of the submitter
+	Media                 []*MediaRecord      // Media objects (e.g., photo of submitter)
+	Language              []string            // Languages used by the submitter
+	SubmitterRecordFileID string              // Submitter record file identifier
+	UID                   string              // Unique identifier (GEDCOM 7.0)
+	ExternalID            []*ExternalIDRecord // External identifiers (GEDCOM 7.0)
+	AutomatedRecordId     string              // Unique record ID assigned by the source system
+	Note                  []*NoteRecord       // Notes from the submitter
+	SharedNote            []*SharedNoteRecord // Shared note references (GEDCOM 7.0)
+	Change                *ChangeRecord       // Record of when this record was last modified
+	Creation              CreationRecord      // Record creation date (GEDCOM 7.0)
 }
 
 // NameRecord represents a name for an individual. An individual may have
@@ -236,10 +268,13 @@ type NameRecord struct {
 	NamePieceSurnamePrefix string               // Surname prefix (e.g., "van", "de")
 	NamePieceSurname       string               // Surname
 	NamePieceSuffix        string               // Name suffix (e.g., "Jr.", "III")
+	RestrictionNotice      string               // Privacy restriction (GEDCOM 7.0)
 	Phonetic               []*VariantNameRecord // Phonetic variants of the name
 	Romanized              []*VariantNameRecord // Romanized variants of the name
+	Translation            []*TranslationRecord // Translations (GEDCOM 7.0)
 	Citation               []*CitationRecord    // Source citations for this name
 	Note                   []*NoteRecord        // Notes about this name
+	SharedNote             []*SharedNoteRecord  // Shared note references (GEDCOM 7.0)
 	UserDefined            []UserDefinedTag     // User-defined tags
 }
 
@@ -270,41 +305,48 @@ type DataRecord struct {
 // Common attribute tags include OCCU (occupation), RESI (residence),
 // EDUC (education), RELI (religion).
 type EventRecord struct {
-	Tag                  string            // Event type tag (e.g., "BIRT", "DEAT", "MARR")
-	Value                string            // Event value, often "Y" to indicate event occurred
-	Type                 string            // Detailed event type for generic EVEN tags
-	Date                 string            // Date in GEDCOM date format
-	Place                PlaceRecord       // Location where the event occurred
-	Address              AddressRecord     // Address associated with the event
-	Age                  string            // Age of the individual at the time of the event
-	ResponsibleAgency    string            // Agency responsible for the record
-	ReligiousAffiliation string            // Religious affiliation associated with event
-	Cause                string            // Cause (e.g., cause of death)
-	RestrictionNotice    string            // Privacy restriction (GEDCOM 5.5.1)
-	ChildInFamily        *FamilyRecord     // Link to parent family for birth events
-	AdoptedByParent      string            // For adoption: "HUSB", "WIFE", or "BOTH"
-	Citation             []*CitationRecord // Source citations for this event
-	Media                []*MediaRecord    // Media objects (e.g., photos, certificates)
-	Note                 []*NoteRecord     // Notes about this event
-	UserDefined          []UserDefinedTag  // User-defined tags
+	Tag                  string              // Event type tag (e.g., "BIRT", "DEAT", "MARR")
+	Value                string              // Event value, often "Y" to indicate event occurred
+	Type                 string              // Detailed event type for generic EVEN tags
+	Date                 string              // Date in GEDCOM date format
+	SortDate             string              // Sort date for ordering events (GEDCOM 7.0 SDATE)
+	Place                PlaceRecord         // Location where the event occurred
+	Address              AddressRecord       // Address associated with the event
+	Age                  string              // Age of the individual at the time of the event
+	ResponsibleAgency    string              // Agency responsible for the record
+	ReligiousAffiliation string              // Religious affiliation associated with event
+	Cause                string              // Cause (e.g., cause of death)
+	RestrictionNotice    string              // Privacy restriction (GEDCOM 5.5.1)
+	ChildInFamily        *FamilyRecord       // Link to parent family for birth events
+	AdoptedByParent      string              // For adoption: "HUSB", "WIFE", or "BOTH"
+	Citation             []*CitationRecord   // Source citations for this event
+	Media                []*MediaRecord      // Media objects (e.g., photos, certificates)
+	Note                 []*NoteRecord       // Notes about this event
+	SharedNote           []*SharedNoteRecord // Shared note references (GEDCOM 7.0)
+	UserDefined          []UserDefinedTag    // User-defined tags
 }
 
 // NoteRecord contains a note or comment attached to a record.
 type NoteRecord struct {
-	Note     string            // The note text
-	Citation []*CitationRecord // Source citations for the note
+	Note        string               // The note text
+	Mime        string               // MIME type (GEDCOM 7.0, e.g., "text/plain" or "text/html")
+	Language    string               // Language tag (GEDCOM 7.0, BCP 47)
+	Translation []*TranslationRecord // Translations (GEDCOM 7.0)
+	Citation    []*CitationRecord    // Source citations for the note
 }
 
 // PlaceRecord represents a geographic location. The Name field typically
 // contains a comma-separated jurisdiction hierarchy (e.g., "City, County, State, Country").
 type PlaceRecord struct {
-	Name      string                    // Place name (jurisdiction hierarchy)
-	Phonetic  []*VariantPlaceNameRecord // Phonetic variants of the place name
-	Romanized []*VariantPlaceNameRecord // Romanized variants of the place name
-	Latitude  string                    // Latitude in GEDCOM format (e.g., "N50.9333")
-	Longitude string                    // Longitude in GEDCOM format (e.g., "W1.8")
-	Citation  []*CitationRecord         // Source citations
-	Note      []*NoteRecord             // Notes about the place
+	Name        string                    // Place name (jurisdiction hierarchy)
+	Language    string                    // Language tag (GEDCOM 7.0, BCP 47)
+	Phonetic    []*VariantPlaceNameRecord // Phonetic variants of the place name
+	Romanized   []*VariantPlaceNameRecord // Romanized variants of the place name
+	Translation []*TranslationRecord      // Translations (GEDCOM 7.0)
+	Latitude    string                    // Latitude in GEDCOM format (e.g., "N50.9333")
+	Longitude   string                    // Longitude in GEDCOM format (e.g., "W1.8")
+	Citation    []*CitationRecord         // Source citations
+	Note        []*NoteRecord             // Notes about the place
 }
 
 // VariantPlaceNameRecord represents a phonetic or romanized variant of a place name.
@@ -357,6 +399,62 @@ type UserDefinedTag struct {
 type AssociationRecord struct {
 	Xref     string            // Cross-reference to the associated individual
 	Relation string            // Relationship type (e.g., "godparent", "witness")
+	Role     string            // Role in the association (GEDCOM 7.0)
+	Phrase   string            // Free-text phrase for the association (GEDCOM 7.0)
 	Citation []*CitationRecord // Source citations
 	Note     []*NoteRecord     // Notes about this association
+}
+
+// SharedNoteRecord represents a shared note record that can be referenced
+// from multiple places in the GEDCOM file (GEDCOM 7.0).
+type SharedNoteRecord struct {
+	Xref              string
+	Note              string
+	Mime              string // text/plain or text/html
+	Language          string // BCP 47
+	Translation       []*TranslationRecord
+	Citation          []*CitationRecord
+	UserReference     []*UserReferenceRecord
+	AutomatedRecordId string
+	Change            ChangeRecord
+	Creation          CreationRecord
+	UserDefined       []UserDefinedTag
+}
+
+// TranslationRecord represents a translation of text into another language (GEDCOM 7.0).
+type TranslationRecord struct {
+	Value    string
+	Language string // BCP 47
+	Mime     string
+}
+
+// ExternalIDRecord represents an external identifier for a record (GEDCOM 7.0).
+type ExternalIDRecord struct {
+	ID   string
+	Type string // URI
+}
+
+// CreationRecord indicates when a record was created (GEDCOM 7.0).
+type CreationRecord struct {
+	Date string
+	Time string
+}
+
+// SchemaRecord maps extension tags to URIs (GEDCOM 7.0).
+type SchemaRecord struct {
+	Tag []*SchemaTagRecord
+}
+
+// SchemaTagRecord maps a single extension tag to its URI (GEDCOM 7.0).
+type SchemaTagRecord struct {
+	Tag string // extension tag (e.g. "_MYEXT")
+	URI string
+}
+
+// CropRecord describes a crop region within a media file (GEDCOM 7.0).
+type CropRecord struct {
+	Top    string
+	Left   string
+	Width  string
+	Height string
 }
