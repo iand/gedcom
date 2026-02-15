@@ -210,6 +210,144 @@ func TestEncodeText(t *testing.T) {
 	}
 }
 
+func newGedcom70Encoder(w *bytes.Buffer) *Encoder {
+	enc := NewEncoder(w)
+	enc.SetVersion(Gedcom70)
+	return enc
+}
+
+func TestEncoderGedcom70BOM(t *testing.T) {
+	buf := new(bytes.Buffer)
+	enc := newGedcom70Encoder(buf)
+
+	g := &Gedcom{
+		Header: &Header{},
+	}
+
+	if err := enc.Encode(g); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.Bytes()
+	if len(output) < 3 || output[0] != 0xEF || output[1] != 0xBB || output[2] != 0xBF {
+		t.Errorf("expected UTF-8 BOM at start of output, got %v", output[:min(3, len(output))])
+	}
+}
+
+func TestEncoderGedcom70NoCONC(t *testing.T) {
+	longText := strings.Repeat("abcdefghij", 30) // 300 chars, would trigger CONC in 5.5
+
+	buf := new(bytes.Buffer)
+	enc := newGedcom70Encoder(buf)
+
+	enc.tagWithText(1, "NOTE", longText)
+	if err := enc.flush(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if strings.Contains(output, "CONC") {
+		t.Errorf("GEDCOM 7.0 output should not contain CONC tags, got:\n%s", output)
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) != 1 {
+		t.Errorf("expected 1 line, got %d: %v", len(lines), lines)
+	}
+	if lines[0] != "1 NOTE "+longText {
+		t.Errorf("unexpected output: %s", lines[0])
+	}
+}
+
+func TestEncoderGedcom70NoCHAR(t *testing.T) {
+	buf := new(bytes.Buffer)
+	enc := newGedcom70Encoder(buf)
+
+	g := &Gedcom{
+		Header: &Header{
+			CharacterSet:        "UTF-8",
+			CharacterSetVersion: "1.0",
+		},
+	}
+
+	if err := enc.Encode(g); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if strings.Contains(output, "CHAR") {
+		t.Errorf("GEDCOM 7.0 output should not contain CHAR tag, got:\n%s", output)
+	}
+}
+
+func TestEncoderGedcom70GedcVers(t *testing.T) {
+	buf := new(bytes.Buffer)
+	enc := newGedcom70Encoder(buf)
+
+	g := &Gedcom{
+		Header: &Header{
+			Version: "5.5.1",
+			Form:    "LINEAGE-LINKED",
+		},
+	}
+
+	if err := enc.Encode(g); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "2 VERS 7.0") {
+		t.Errorf("GEDCOM 7.0 output should contain '2 VERS 7.0', got:\n%s", output)
+	}
+	if strings.Contains(output, "FORM") {
+		t.Errorf("GEDCOM 7.0 output should not contain FORM tag, got:\n%s", output)
+	}
+}
+
+func TestEncoderGedcom70RoundTrip(t *testing.T) {
+	data, err := os.ReadFile("testdata/alexclark.ged")
+	if err != nil {
+		t.Fatalf("failed to read testdata/alexclark.ged")
+	}
+
+	d := NewDecoder(bytes.NewReader(data))
+	original, err := d.Decode()
+	if err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+
+	// Encode as GEDCOM 7.0
+	buf := new(bytes.Buffer)
+	enc := newGedcom70Encoder(buf)
+	if err := enc.Encode(original); err != nil {
+		t.Fatalf("encode error: %v", err)
+	}
+
+	// Verify BOM
+	output := buf.Bytes()
+	if len(output) < 3 || output[0] != 0xEF || output[1] != 0xBB || output[2] != 0xBF {
+		t.Error("expected UTF-8 BOM at start of output")
+	}
+
+	// Verify no CONC tags
+	if strings.Contains(string(output), "CONC") {
+		t.Error("GEDCOM 7.0 output should not contain CONC tags")
+	}
+
+	// Verify no CHAR tags
+	if strings.Contains(string(output), "\nCHAR") || strings.Contains(string(output), " CHAR ") {
+		t.Error("GEDCOM 7.0 output should not contain CHAR tags")
+	}
+
+	// Verify GEDC block
+	if !strings.Contains(string(output), "2 VERS 7.0") {
+		t.Error("GEDCOM 7.0 output should contain '2 VERS 7.0'")
+	}
+	if strings.Contains(string(output), "FORM") {
+		t.Error("GEDCOM 7.0 output should not contain FORM in GEDC block")
+	}
+}
+
 func TestDecodeEncode(t *testing.T) {
 	data, err := os.ReadFile("testdata/alexclark.ged")
 	if err != nil {

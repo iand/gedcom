@@ -1,0 +1,98 @@
+0 HEAD
+1 GEDC
+2 VERS 7.0
+1 SCHMA
+2 TAG _MYEXT http://example.com/myext
+2 TAG _OTHER http://example.com/other
+0 @N1@ SNOTE This is a shared note
+1 MIME text/plain
+1 LANG en
+1 TRAN Ceci est une note partagee
+2 LANG fr
+0 @I1@ INDI
+1 NAME John /Smith/
+2 TRAN Jean /Forgeron/
+3 LANG fr
+2 RESN confidential
+2 SNOTE @N1@
+1 SEX M
+1 BIRT
+2 DATE 1 JAN 1990
+2 SDATE 1990-01-01
+2 AGE 0y
+2 SNOTE @N1@
+1 NO MARR
+2 DATE BEF 2020
+1 UID 12345678-1234-1234-1234-123456789012
+1 EXID ext-id-123
+2 TYPE http://example.com/id
+1 RESN locked
+1 CREA
+2 DATE 1 JAN 2024
+3 TIME 12:00:00
+1 SNOTE @N1@
+1 ASSO @I2@
+2 ROLE GODP
+3 PHRASE Godfather at baptism
+2 RELA godparent
+0 @I2@ INDI
+1 NAME Jane /Doe/
+1 SEX F
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 1 JUN 2020
+1 SLGS
+2 DATE 1 JUL 2020
+1 FACT
+2 TYPE Family Fact
+1 NO DIV
+1 UID family-uid-001
+1 EXID fam-ext-id
+2 TYPE http://example.com/famid
+1 RESN privacy
+1 CREA
+2 DATE 2 FEB 2024
+1 SNOTE @N1@
+0 @S1@ SOUR
+1 TITL Test Source
+1 UID source-uid-001
+1 EXID src-ext-id
+2 TYPE http://example.com/srcid
+1 RESN locked
+1 CREA
+2 DATE 3 MAR 2024
+1 SNOTE @N1@
+0 @R1@ REPO
+1 NAME Test Repository
+1 UID repo-uid-001
+1 EXID repo-ext-id
+2 TYPE http://example.com/repoid
+1 CREA
+2 DATE 4 APR 2024
+1 SNOTE @N1@
+0 @M1@ OBJE
+1 FILE photo.jpg
+2 FORM jpeg
+3 TYPE photo
+2 CROP
+3 TOP 10
+3 LEFT 20
+3 WIDTH 100
+3 HEIGHT 200
+1 UID media-uid-001
+1 EXID media-ext-id
+2 TYPE http://example.com/mediaid
+1 CREA
+2 DATE 5 MAY 2024
+1 SNOTE @N1@
+0 @U1@ SUBM
+1 NAME Test Submitter
+1 UID subm-uid-001
+1 EXID subm-ext-id
+2 TYPE http://example.com/submid
+1 CREA
+2 DATE 6 JUN 2024
+1 SNOTE @N1@
+0 TRLR

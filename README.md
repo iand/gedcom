@@ -43,19 +43,60 @@ This example shows how to parse a GEDCOM file and list all the individuals. In t
 
 The structures produced by the Decoder are in [types.go](types.go) and correspond roughly 1:1 to the structures in the [GEDCOM specification](http://homepages.rootsweb.ancestry.com/~pmcbride/gedcom/55gctoc.htm).
 
-This package does not implement the entire GEDCOM specification, I'm still working on it. It's about 80% complete which is enough for about 99% of GEDCOM files. It has not been extensively tested with non-ASCII character sets nor with pathological cases such as the [GEDCOM 5.5 Torture Test Files](http://www.geditcom.com/gedcom.html).
-
 ### Using the Encoder
 
 In addition to decoding GEDCOM files, this package also provides an Encoder for generating GEDCOM files from the structs in [types.go](types.go). You can create an encoder using the `NewEncoder` method, which writes to an `io.Writer`.
 
-To see an example of how to use the encoder, refer to [encoder_example.go](encoder_example.go). This example illustrates how to create individual and family records, populate them with data, and encode them into a valid GEDCOM file.
+By default the encoder produces GEDCOM 5.5 output. Use `SetVersion` to produce GEDCOM 7.0 output:
 
-You can run the example using the following command:
+	enc := gedcom.NewEncoder(w)
+	enc.SetVersion(gedcom.Gedcom70)
 
-```bash
-go run encoder_example.go
-```
+To see a full example of how to use the encoder, refer to [encoder_example.go](encoder_example.go).
+
+## Compatibility
+
+### GEDCOM 5.5/5.5.1
+
+The decoder supports the core GEDCOM 5.5/5.5.1 record types: HEAD, INDI, FAM, SOUR, REPO, OBJE, SUBM, SUBN, and TRLR. Within these records, the commonly used tags are handled, covering the vast majority of real-world GEDCOM files. Tags that are not recognized by the decoder are preserved as `UserDefinedTag` values, so no data is silently discarded. The encoder can round-trip all decoded data, with the exception of `Submitter` references on individual records.
+
+### GEDCOM 7.0
+
+The decoder reads GEDCOM 7.0 files transparently, including files with a UTF-8 BOM. The following GEDCOM 7.0 tags are supported in addition to the 5.5/5.5.1 tags:
+
+| Tag | Description | Context |
+|-----|-------------|---------|
+| `SNOTE` | Shared note record and references | Top-level record; references in individuals, families, sources, repositories, media, submitters, events, names |
+| `SCHMA` | Schema for extension tag definitions | Header |
+| `TAG` | Extension tag-to-URI mapping | Schema |
+| `EXID` | External identifier | Individuals, families, sources, repositories, media, submitters |
+| `UID` | Unique identifier | Individuals, families, sources, repositories, media, submitters |
+| `CREA` | Record creation date | Individuals, families, sources, repositories, media, submitters, shared notes |
+| `SDATE` | Sort date for ordering events | Events |
+| `NO` | Non-event (assertion that an event did not occur) | Individuals, families |
+| `CROP` | Image crop region | Media file |
+| `TRAN` | Translation of text | Shared notes, notes, names, places |
+| `MIME` | MIME type of text content | Shared notes, notes |
+| `LANG` | BCP 47 language tag | Shared notes, notes, places |
+| `RESN` | Restriction notice | Individuals, families, sources, names |
+| `ROLE` | Role in an association (with `PHRASE` sub-tag) | Associations |
+| `INIL` | Initiatory (LDS) | Individual events |
+| `BAPL` | Baptism (LDS) | Individual events |
+| `CONL` | Confirmation (LDS) | Individual events |
+| `ENDL` | Endowment (LDS) | Individual events |
+| `SLGC` | Sealing to parents (LDS) | Individual events |
+| `SLGS` | Sealing to spouse (LDS) | Family events |
+| `FACT` | Fact | Family events |
+| `AGE` | Age at event | Events |
+
+The encoder can produce GEDCOM 7.0 output via `SetVersion(Gedcom70)`. In this mode it writes a UTF-8 BOM, omits the `CHAR` and `GEDC.FORM` tags, sets `GEDC.VERS` to `7.0`, and writes long text lines without `CONC` splitting.
+
+### Ancestry
+
+[Ancestry](https://www.ancestry.com/) is a major producer of GEDCOM files. The decoder includes workarounds for known issues in Ancestry exports:
+
+- **Malformed NOTE values**: Ancestry sometimes produces NOTE tags with embedded newlines in the value (i.e. line breaks that are not preceded by a CONT tag). The scanner detects and recovers from this by treating the continuation as part of the NOTE value.
+- **Non-standard PUBL sub-tags**: Ancestry exports may include DATE and PLAC tags nested under the PUBL (publication facts) tag, which is not part of the GEDCOM specification. The decoder incorporates these values into the publication facts string rather than discarding them.
 
 ## Installation
 

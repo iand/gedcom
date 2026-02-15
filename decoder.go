@@ -188,6 +188,20 @@ func (d *Decoder) media(xref string) *MediaRecord {
 	return ref
 }
 
+func (d *Decoder) sharedNote(xref string) *SharedNoteRecord {
+	if xref == "" {
+		return &SharedNoteRecord{}
+	}
+
+	ref, found := d.refs[xref].(*SharedNoteRecord)
+	if !found {
+		rec := &SharedNoteRecord{Xref: xref}
+		d.refs[rec.Xref] = rec
+		return rec
+	}
+	return ref
+}
+
 func (d *Decoder) unhandledTag(level int, tag string, value string, xref string) {
 	if d.tagLogger == nil {
 		return
@@ -208,9 +222,9 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				g.Individual = append(g.Individual, obj)
 				d.pushParser(makeIndividualParser(d, obj, level))
 			case "SUBM":
-				// TODO: parse submitters
 				obj := d.submitter(xref)
 				g.Submitter = append(g.Submitter, obj)
+				d.pushParser(makeSubmitterParser(d, obj, level))
 			case "FAM":
 				obj := d.family(xref)
 				g.Family = append(g.Family, obj)
@@ -227,6 +241,11 @@ func makeRootParser(d *Decoder, g *Gedcom) parser {
 				obj := d.media(xref)
 				g.Media = append(g.Media, obj)
 				d.pushParser(makeMediaParser(d, obj, level))
+			case "SNOTE":
+				obj := d.sharedNote(xref)
+				obj.Note = value
+				g.SharedNote = append(g.SharedNote, obj)
+				d.pushParser(makeSharedNoteParser(d, obj, level))
 			case "TRLR":
 				g.Trailer = &Trailer{}
 			default:
@@ -255,7 +274,7 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 			d.pushParser(makeNameParser(d, n, level))
 		case "SEX":
 			i.Sex = value
-		case "BIRT", "CHR", "DEAT", "BURI", "CREM", "ADOP", "BAPM", "BARM", "BASM", "BLES", "CHRA", "CONF", "FCOM", "ORDN", "NATU", "EMIG", "IMMI", "CENS", "PROB", "WILL", "GRAD", "RETI", "EVEN":
+		case "BIRT", "CHR", "DEAT", "BURI", "CREM", "ADOP", "BAPM", "BARM", "BASM", "BLES", "CHRA", "CONF", "FCOM", "ORDN", "NATU", "EMIG", "IMMI", "CENS", "PROB", "WILL", "GRAD", "RETI", "EVEN", "INIL", "BAPL", "CONL", "ENDL", "SLGC":
 			e := &EventRecord{Tag: tag}
 			if value != "" {
 				if value == "Y" && (tag == "BIRT" || tag == "CHR" || tag == "DEAT") {
@@ -329,6 +348,23 @@ func makeIndividualParser(d *Decoder, i *IndividualRecord, minLevel int) parser 
 			m := &MediaRecord{Xref: stripXref(value)}
 			i.Media = append(i.Media, m)
 			d.pushParser(makeMediaParser(d, m, level))
+		case "UID":
+			i.UID = value
+		case "EXID":
+			r := &ExternalIDRecord{ID: value}
+			i.ExternalID = append(i.ExternalID, r)
+			d.pushParser(makeExternalIDParser(d, r, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &i.Creation, level))
+		case "RESN":
+			i.RestrictionNotice = value
+		case "NO":
+			e := &EventRecord{Tag: "NO", Value: value}
+			i.NonEvent = append(i.NonEvent, e)
+			d.pushParser(makeEventParser(d, "NO", e, level))
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			i.SharedNote = append(i.SharedNote, r)
 		default:
 			i.UserDefined = append(i.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -370,6 +406,12 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			c := &VariantNameRecord{Name: value}
 			n.Romanized = append(n.Romanized, c)
 			d.pushParser(makeVariantNameParser(d, c, level))
+		case "RESN":
+			n.RestrictionNotice = value
+		case "TRAN":
+			tr := &TranslationRecord{Value: value}
+			n.Translation = append(n.Translation, tr)
+			d.pushParser(makeTranslationParser(d, tr, level))
 		case "SOUR":
 			c := &CitationRecord{Source: d.source(stripXref(value))}
 			n.Citation = append(n.Citation, c)
@@ -378,6 +420,9 @@ func makeNameParser(d *Decoder, n *NameRecord, minLevel int) parser {
 			r := &NoteRecord{Note: value}
 			n.Note = append(n.Note, r)
 			d.pushParser(makeNoteParser(d, r, level))
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			n.SharedNote = append(n.SharedNote, r)
 		default:
 			n.UserDefined = append(n.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -475,6 +520,19 @@ func makeSourceParser(d *Decoder, s *SourceRecord, minLevel int) parser {
 			m := &MediaRecord{Xref: stripXref(value)}
 			s.Media = append(s.Media, m)
 			d.pushParser(makeMediaParser(d, m, level))
+		case "UID":
+			s.UID = value
+		case "EXID":
+			r := &ExternalIDRecord{ID: value}
+			s.ExternalID = append(s.ExternalID, r)
+			d.pushParser(makeExternalIDParser(d, r, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &s.Creation, level))
+		case "RESN":
+			s.RestrictionNotice = value
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			s.SharedNote = append(s.SharedNote, r)
 		default:
 			s.UserDefined = append(s.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -606,6 +664,14 @@ func makeNoteParser(d *Decoder, n *NoteRecord, minLevel int) parser {
 			n.Note = n.Note + "\n" + value
 		case "CONC":
 			n.Note = n.Note + value
+		case "MIME":
+			n.Mime = value
+		case "LANG":
+			n.Language = value
+		case "TRAN":
+			tr := &TranslationRecord{Value: value}
+			n.Translation = append(n.Translation, tr)
+			d.pushParser(makeTranslationParser(d, tr, level))
 		case "SOUR":
 			c := &CitationRecord{Source: d.source(stripXref(value))}
 			n.Citation = append(n.Citation, c)
@@ -726,8 +792,12 @@ func makeEventParser(d *Decoder, parentTag string, e *EventRecord, minLevel int)
 			e.ReligiousAffiliation = value
 		case "CAUS":
 			e.Cause = value
+		case "AGE":
+			e.Age = value
 		case "RESN":
 			e.RestrictionNotice = value
+		case "SDATE":
+			e.SortDate = value
 		case "NOTE":
 			r := &NoteRecord{Note: value}
 			e.Note = append(e.Note, r)
@@ -740,6 +810,9 @@ func makeEventParser(d *Decoder, parentTag string, e *EventRecord, minLevel int)
 			m := &MediaRecord{Xref: stripXref(value)}
 			e.Media = append(e.Media, m)
 			d.pushParser(makeMediaParser(d, m, level))
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			e.SharedNote = append(e.SharedNote, r)
 		default:
 
 			if tryAddressTags(d, &e.Address, level, tag, value, xref) {
@@ -782,6 +855,12 @@ func makePlaceParser(d *Decoder, r *PlaceRecord, minLevel int) parser {
 			return d.popParser(level, tag, value, xref)
 		}
 		switch tag {
+		case "LANG":
+			r.Language = value
+		case "TRAN":
+			tr := &TranslationRecord{Value: value}
+			r.Translation = append(r.Translation, tr)
+			d.pushParser(makeTranslationParser(d, tr, level))
 		case "FONE": // 5.5.1
 			c := &VariantPlaceNameRecord{Name: value}
 			r.Phonetic = append(r.Phonetic, c)
@@ -876,7 +955,7 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 			f.Wife = d.individual(stripXref(value))
 		case "CHIL":
 			f.Child = append(f.Child, d.individual(stripXref(value)))
-		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN", "RESI":
+		case "ANUL", "CENS", "DIV", "DIVF", "ENGA", "MARR", "MARB", "MARC", "MARL", "MARS", "EVEN", "RESI", "SLGS", "FACT":
 			e := &EventRecord{Tag: tag}
 			if value != "" {
 				// any event other value is invalid and added as a note instead
@@ -907,6 +986,23 @@ func makeFamilyParser(d *Decoder, f *FamilyRecord, minLevel int) parser {
 			m := &MediaRecord{Xref: stripXref(value)}
 			f.Media = append(f.Media, m)
 			d.pushParser(makeMediaParser(d, m, level))
+		case "UID":
+			f.UID = value
+		case "EXID":
+			r := &ExternalIDRecord{ID: value}
+			f.ExternalID = append(f.ExternalID, r)
+			d.pushParser(makeExternalIDParser(d, r, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &f.Creation, level))
+		case "RESN":
+			f.RestrictionNotice = value
+		case "NO":
+			e := &EventRecord{Tag: "NO", Value: value}
+			f.NonEvent = append(f.NonEvent, e)
+			d.pushParser(makeEventParser(d, "NO", e, level))
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			f.SharedNote = append(f.SharedNote, r)
 		default:
 			f.UserDefined = append(f.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -965,7 +1061,17 @@ func makeMediaParser(d *Decoder, m *MediaRecord, minLevel int) parser {
 			d.pushParser(makeCitationParser(d, c, level))
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &m.Change, level))
-
+		case "UID":
+			m.UID = value
+		case "EXID":
+			r := &ExternalIDRecord{ID: value}
+			m.ExternalID = append(m.ExternalID, r)
+			d.pushParser(makeExternalIDParser(d, r, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &m.Creation, level))
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			m.SharedNote = append(m.SharedNote, r)
 		default:
 			m.UserDefined = append(m.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -992,6 +1098,9 @@ func makeMediaFileParser(d *Decoder, f *FileRecord, minLevel int) parser {
 		case "TITL":
 			f.Title = value
 			d.pushParser(makeTextParser(d, &f.Title, level))
+		case "CROP":
+			f.Crop = &CropRecord{}
+			d.pushParser(makeCropParser(d, f.Crop, level))
 		default:
 			d.unhandledTag(level, tag, value, xref)
 		}
@@ -1119,6 +1228,11 @@ func makeHeaderParser(d *Decoder, h *Header, minLevel int) parser {
 		case "CHAR":
 			h.CharacterSet = value
 			d.pushParser(makeHeaderCharacterSetVersionParser(d, h, level))
+		case "SCHMA":
+			if h.Schema == nil {
+				h.Schema = &SchemaRecord{}
+			}
+			d.pushParser(makeSchemaParser(d, h.Schema, level))
 		default:
 			h.UserDefined = append(h.UserDefined, UserDefinedTag{
 				Tag:   tag,
@@ -1293,6 +1407,17 @@ func makeRepositoryParser(d *Decoder, r *RepositoryRecord, minLevel int) parser 
 			d.pushParser(makeUserReferenceParser(d, u, level))
 		case "CHAN":
 			d.pushParser(makeChangeParser(d, &r.Change, level))
+		case "UID":
+			r.UID = value
+		case "EXID":
+			x := &ExternalIDRecord{ID: value}
+			r.ExternalID = append(r.ExternalID, x)
+			d.pushParser(makeExternalIDParser(d, x, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &r.Creation, level))
+		case "SNOTE":
+			sn := d.sharedNote(stripXref(value))
+			r.SharedNote = append(r.SharedNote, sn)
 		default:
 			if tryAddressTags(d, &r.Address, level, tag, value, xref) {
 				return nil
@@ -1318,6 +1443,9 @@ func makeAssociationParser(d *Decoder, a *AssociationRecord, minLevel int) parse
 		switch tag {
 		case "RELA":
 			a.Relation = value
+		case "ROLE":
+			a.Role = value
+			d.pushParser(makeAssociationRoleParser(d, a, level))
 		case "SOUR":
 			c := &CitationRecord{Source: d.source(stripXref(value))}
 			a.Citation = append(a.Citation, c)
@@ -1334,6 +1462,21 @@ func makeAssociationParser(d *Decoder, a *AssociationRecord, minLevel int) parse
 	}
 }
 
+func makeAssociationRoleParser(d *Decoder, a *AssociationRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "PHRASE":
+			a.Phrase = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
 func makeUserDefinedTagParser(d *Decoder, u *UserDefinedTag, minLevel int) parser {
 	return func(level int, tag string, value string, xref string) error {
 		if level <= minLevel {
@@ -1346,6 +1489,229 @@ func makeUserDefinedTagParser(d *Decoder, u *UserDefinedTag, minLevel int) parse
 			Level: level,
 		})
 		d.pushParser(makeUserDefinedTagParser(d, &u.UserDefined[len(u.UserDefined)-1], level))
+		return nil
+	}
+}
+
+func makeSubmitterParser(d *Decoder, s *SubmitterRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "NAME":
+			s.Name = value
+		case "LANG":
+			s.Language = append(s.Language, value)
+		case "RFN":
+			s.SubmitterRecordFileID = value
+		case "RIN":
+			s.AutomatedRecordId = value
+		case "NOTE":
+			r := &NoteRecord{Note: value}
+			s.Note = append(s.Note, r)
+			d.pushParser(makeNoteParser(d, r, level))
+		case "OBJE":
+			m := &MediaRecord{Xref: stripXref(value)}
+			s.Media = append(s.Media, m)
+			d.pushParser(makeMediaParser(d, m, level))
+		case "CHAN":
+			if s.Change == nil {
+				s.Change = &ChangeRecord{}
+			}
+			d.pushParser(makeChangeParser(d, s.Change, level))
+		case "UID":
+			s.UID = value
+		case "EXID":
+			r := &ExternalIDRecord{ID: value}
+			s.ExternalID = append(s.ExternalID, r)
+			d.pushParser(makeExternalIDParser(d, r, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &s.Creation, level))
+		case "SNOTE":
+			r := d.sharedNote(stripXref(value))
+			s.SharedNote = append(s.SharedNote, r)
+		default:
+			if s.Address == nil {
+				s.Address = &AddressRecord{}
+			}
+			if tryAddressTags(d, s.Address, level, tag, value, xref) {
+				return nil
+			}
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeSharedNoteParser(d *Decoder, sn *SharedNoteRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "CONT":
+			sn.Note = sn.Note + "\n" + value
+		case "CONC":
+			sn.Note = sn.Note + value
+		case "MIME":
+			sn.Mime = value
+		case "LANG":
+			sn.Language = value
+		case "TRAN":
+			tr := &TranslationRecord{Value: value}
+			sn.Translation = append(sn.Translation, tr)
+			d.pushParser(makeTranslationParser(d, tr, level))
+		case "SOUR":
+			c := &CitationRecord{Source: d.source(stripXref(value))}
+			sn.Citation = append(sn.Citation, c)
+			d.pushParser(makeCitationParser(d, c, level))
+		case "REFN":
+			r := &UserReferenceRecord{Number: value}
+			sn.UserReference = append(sn.UserReference, r)
+			d.pushParser(makeUserReferenceParser(d, r, level))
+		case "RIN":
+			sn.AutomatedRecordId = value
+		case "CHAN":
+			d.pushParser(makeChangeParser(d, &sn.Change, level))
+		case "CREA":
+			d.pushParser(makeCreationParser(d, &sn.Creation, level))
+		default:
+			sn.UserDefined = append(sn.UserDefined, UserDefinedTag{
+				Tag:   tag,
+				Value: value,
+				Xref:  xref,
+				Level: level,
+			})
+			d.pushParser(makeUserDefinedTagParser(d, &sn.UserDefined[len(sn.UserDefined)-1], level))
+		}
+		return nil
+	}
+}
+
+func makeTranslationParser(d *Decoder, tr *TranslationRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "LANG":
+			tr.Language = value
+		case "MIME":
+			tr.Mime = value
+		case "CONT":
+			tr.Value = tr.Value + "\n" + value
+		case "CONC":
+			tr.Value = tr.Value + value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeExternalIDParser(d *Decoder, r *ExternalIDRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TYPE":
+			r.Type = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeCreationParser(d *Decoder, c *CreationRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "DATE":
+			c.Date = value
+			d.pushParser(makeCreationDateParser(d, c, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeCreationDateParser(d *Decoder, c *CreationRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TIME":
+			c.Time = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeSchemaParser(d *Decoder, s *SchemaRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TAG":
+			st := &SchemaTagRecord{}
+			// Value format: "_TAGNAME URI" e.g. "_MYEXT http://example.com"
+			if parts := strings.SplitN(value, " ", 2); len(parts) == 2 {
+				st.Tag = parts[0]
+				st.URI = parts[1]
+			} else {
+				st.Tag = value
+			}
+			s.Tag = append(s.Tag, st)
+			d.pushParser(makeSchemaTagParser(d, st, level))
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeSchemaTagParser(d *Decoder, st *SchemaTagRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		// The URI is typically the value of the TAG line itself,
+		// but some implementations may use a sub-tag
+		switch tag {
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
+		return nil
+	}
+}
+
+func makeCropParser(d *Decoder, c *CropRecord, minLevel int) parser {
+	return func(level int, tag string, value string, xref string) error {
+		if level <= minLevel {
+			return d.popParser(level, tag, value, xref)
+		}
+		switch tag {
+		case "TOP":
+			c.Top = value
+		case "LEFT":
+			c.Left = value
+		case "WIDTH":
+			c.Width = value
+		case "HEIGHT":
+			c.Height = value
+		default:
+			d.unhandledTag(level, tag, value, xref)
+		}
 		return nil
 	}
 }

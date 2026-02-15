@@ -335,8 +335,11 @@ func (e *ScanErr) Unwrap() error {
 	return e.Err
 }
 
+// isSpace reports whether c is a whitespace rune. The Unicode BOM (U+FEFF) is
+// included so that GEDCOM 7.0 files, which require a leading UTF-8 BOM, are
+// handled transparently by the scanner.
 func isSpace(c rune) bool {
-	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
+	return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\uFEFF'
 }
 
 func isAlphaNumeric(c rune) bool {
