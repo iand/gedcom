@@ -17,7 +17,7 @@ import (
 type Decoder struct {
 	r         *bufio.Reader
 	parsers   []parser
-	refs      map[string]interface{}
+	refs      map[string]any
 	line      int
 	tagLogger *log.Logger
 }
@@ -49,7 +49,7 @@ func (d *Decoder) Decode() (*Gedcom, error) {
 		Submitter:  make([]*SubmitterRecord, 0),
 	}
 
-	d.refs = make(map[string]interface{})
+	d.refs = make(map[string]any)
 	d.parsers = []parser{makeRootParser(d, g)}
 	if err := d.scan(g); err != nil {
 		return nil, err

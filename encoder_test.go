@@ -136,7 +136,6 @@ func TestEncodeHeader(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			g := &Gedcom{
 				Header: tc.header,
@@ -191,7 +190,6 @@ func TestEncodeText(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 			enc := NewEncoder(buf)
