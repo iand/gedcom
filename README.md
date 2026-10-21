@@ -54,6 +54,11 @@ By default the encoder produces GEDCOM 5.5 output. Use `SetVersion` to produce G
 
 To see a full example of how to use the encoder, refer to [encoder_example.go](encoder_example.go).
 
+To list the tags in a file that the decoder does not handle, run
+[unhandledtags.go](unhandledtags.go), which uses `Decoder.LogUnhandledTags`:
+
+	go run unhandledtags.go file.ged
+
 ## Compatibility
 
 ### GEDCOM 5.5/5.5.1
